@@ -179,12 +179,40 @@ Behavior:
 
 ### Property registry
 
+The registry is optional. The base API does not require it.
+
+Use it when you want one central inventory of secure properties and stricter runtime guarantees.
+
 ```ts
-import { createPropertyRegistry } from './src/index.ts';
+import {
+  createPropertyRegistry,
+  createSecureStorage,
+  defineSecureStorageProperty,
+} from './src/index.ts';
 
 const registry = createPropertyRegistry();
-registry.register(refreshToken);
+
+const refreshToken = registry.register(
+  defineSecureStorageProperty({
+    namespace: 'auth',
+    name: 'refreshToken',
+  }),
+);
+
+const secureStorage = await createSecureStorage({
+  backend,
+  authStateProvider,
+  registry,
+});
 ```
+
+What the registry gives you:
+
+- rejects duplicate `namespace + name` registrations
+- gives you one central place to discover declared secure properties
+- when passed to `createSecureStorage({ registry })`, the storage instance rejects unregistered properties at runtime
+
+That makes usage more robust in larger codebases because typos, shadow properties, or ad-hoc property definitions fail early instead of silently creating new storage entries.
 
 ### Safe diagnostics
 
