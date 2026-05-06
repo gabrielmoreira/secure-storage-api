@@ -140,26 +140,32 @@ test('sample: versioned profile data migrates through a codec', async () => {
     namespace: 'profile',
     name: 'secureUserProfile',
     version: 3,
-    codec: createMigratingJsonCodec({
+    codec: createMigratingJsonCodec<{
+      customerId: string;
+      selectedAccountId: string;
+      preferredAccountType: string;
+    }>({
       migrate({ value, fromVersion, toVersion }) {
+        const source = value as any;
+
         if (toVersion !== 3) {
           throw new Error('unsupported target');
         }
         if (fromVersion === 1) {
           return {
-            customerId: value.customerId,
-            selectedAccountId: value.accountId,
+            customerId: source.customerId,
+            selectedAccountId: source.accountId,
             preferredAccountType: 'current',
           };
         }
         if (fromVersion === 2) {
           return {
-            customerId: value.customerId,
-            selectedAccountId: value.selectedAccountId,
-            preferredAccountType: value.preferredAccountType ?? 'current',
+            customerId: source.customerId,
+            selectedAccountId: source.selectedAccountId,
+            preferredAccountType: source.preferredAccountType ?? 'current',
           };
         }
-        return value;
+        return source;
       },
     }),
   });
@@ -207,26 +213,32 @@ test('sample: version 2 profile data also migrates to the final versioned shape'
     namespace: 'profile',
     name: 'secureUserProfile',
     version: 3,
-    codec: createMigratingJsonCodec({
+    codec: createMigratingJsonCodec<{
+      customerId: string;
+      selectedAccountId: string;
+      preferredAccountType: string;
+    }>({
       migrate({ value, fromVersion, toVersion }) {
+        const source = value as any;
+
         if (toVersion !== 3) {
           throw new Error('unsupported target');
         }
         if (fromVersion === 1) {
           return {
-            customerId: value.customerId,
-            selectedAccountId: value.accountId,
+            customerId: source.customerId,
+            selectedAccountId: source.accountId,
             preferredAccountType: 'current',
           };
         }
         if (fromVersion === 2) {
           return {
-            customerId: value.customerId,
-            selectedAccountId: value.selectedAccountId,
-            preferredAccountType: value.preferredAccountType ?? 'current',
+            customerId: source.customerId,
+            selectedAccountId: source.selectedAccountId,
+            preferredAccountType: source.preferredAccountType ?? 'current',
           };
         }
-        return value;
+        return source;
       },
     }),
   });
@@ -309,12 +321,14 @@ test('sample: schema-based codec validates decoded JSON values', async () => {
   const preferences = defineSecureStorageProperty({
     namespace: 'profile',
     name: 'preferences',
-    codec: createZodJsonCodec({
+    codec: createZodJsonCodec<{ selectedAccountId: string }>({
       parse(value) {
-        if (!value || typeof value !== 'object' || typeof value.selectedAccountId !== 'string') {
+        const parsed = value as any;
+
+        if (!parsed || typeof parsed !== 'object' || typeof parsed.selectedAccountId !== 'string') {
           throw new Error('invalid schema value');
         }
-        return value;
+        return parsed;
       },
     }),
   });

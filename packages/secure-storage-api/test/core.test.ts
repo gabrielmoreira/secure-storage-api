@@ -73,7 +73,7 @@ test('built-in codecs reject malformed values instead of silently coercing them'
   // Then
   assert.throws(() => builtInCodecs.number.encode(Number.NaN), /number/i);
   assert.throws(() => builtInCodecs.number.decode('not-a-number'), /decode/i);
-  assert.throws(() => builtInCodecs.boolean.encode('yes'), /boolean/i);
+  assert.throws(() => builtInCodecs.boolean.encode('yes' as never), /boolean/i);
   assert.throws(() => builtInCodecs.boolean.decode('yes'), /decode/i);
   assert.throws(() => builtInCodecs.json.decode('{'), SyntaxError);
 });

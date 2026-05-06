@@ -202,20 +202,26 @@ test('migrating codec upgrades old stored values and writes back the latest vers
     backend,
     authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
   });
-  const profileCodec = createMigratingJsonCodec({
+  const profileCodec = createMigratingJsonCodec<{
+    customerId: string;
+    selectedAccountId: string;
+    preferredAccountType: string;
+  }>({
     migrate({ value, fromVersion, toVersion }) {
+      const source = value as any;
+
       if (toVersion !== 3) {
         throw new Error('unsupported target');
       }
       if (fromVersion === 1) {
         return {
-          customerId: value.customerId,
-          selectedAccountId: value.accountId,
+          customerId: source.customerId,
+          selectedAccountId: source.accountId,
           preferredAccountType: 'current',
         };
       }
       if (fromVersion === 3) {
-        return value;
+        return source;
       }
       throw new Error(`unsupported version ${fromVersion}`);
     },
