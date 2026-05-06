@@ -1,0 +1,12 @@
+{
+  "name": "secure-storage-api-workspace",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test -w secure-storage-api",
+    "check": "npm run check -w secure-storage-api",
+    "typecheck": "npm run typecheck -w secure-storage-api"
+  }
+}
