@@ -93,13 +93,15 @@ test('secure diagnostics report only safe metadata and never stored values', asy
 
 test('createZodJsonCodec parses valid values through a schema-like contract', () => {
   // Given
-  const codec = createZodJsonCodec({
+  const codec = createZodJsonCodec<{ selectedAccountId: string }>({
     parse(value) {
-      if (!value || typeof value !== 'object' || typeof value.selectedAccountId !== 'string') {
+      const parsed = value as any;
+
+      if (!parsed || typeof parsed !== 'object' || typeof parsed.selectedAccountId !== 'string') {
         throw new Error('invalid');
       }
 
-      return value;
+      return parsed;
     },
   });
 

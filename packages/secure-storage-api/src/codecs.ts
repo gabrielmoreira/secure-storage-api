@@ -1,4 +1,8 @@
-import { SecureStorageCodecDecodeError, SecureStorageMigrationError } from './api.ts';
+import type { SecureStorageCodec } from './api.ts';
+import {
+  SecureStorageCodecDecodeError,
+  SecureStorageMigrationError,
+} from './api.ts';
 
 /** Built-ins stay exported so custom codecs can compose on top without copying logic. */
 export const builtInCodecs = Object.freeze({
@@ -9,7 +13,7 @@ export const builtInCodecs = Object.freeze({
     decode(encodedValue) {
       return { value: encodedValue };
     },
-  },
+  } satisfies SecureStorageCodec<string>,
   number: {
     encode(value) {
       if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -24,7 +28,7 @@ export const builtInCodecs = Object.freeze({
       }
       return { value };
     },
-  },
+  } satisfies SecureStorageCodec<number>,
   boolean: {
     encode(value) {
       if (typeof value !== 'boolean') {
@@ -38,7 +42,7 @@ export const builtInCodecs = Object.freeze({
       }
       return { value: encodedValue === 'true' };
     },
-  },
+  } satisfies SecureStorageCodec<boolean>,
   json: {
     encode(value) {
       return JSON.stringify(value);
@@ -46,11 +50,11 @@ export const builtInCodecs = Object.freeze({
     decode(encodedValue) {
       return { value: JSON.parse(encodedValue) };
     },
-  },
+  } satisfies SecureStorageCodec<unknown>,
 });
 
 /** This stays dependency-free on purpose. Any schema object with parse() can adapt here. */
-export function createZodJsonCodec(schemaLike) {
+export function createZodJsonCodec<TValue>(schemaLike: { parse(value: unknown): TValue }): SecureStorageCodec<TValue> {
   if (!schemaLike || typeof schemaLike.parse !== 'function') {
     throw new TypeError('createZodJsonCodec expects a schema-like object with a parse() method.');
   }
@@ -74,7 +78,17 @@ export function createZodJsonCodec(schemaLike) {
 }
 
 /** Migration belongs to codecs so version-specific shape evolution stays close to the value itself. */
-export function createMigratingJsonCodec({ migrate }) {
+export function createMigratingJsonCodec<TValue>({
+  migrate,
+}: {
+  migrate(input: {
+    value: unknown;
+    fromVersion: number;
+    toVersion: number;
+    itemMetadata: any;
+    propertyMetadata: any;
+  }): TValue;
+}): SecureStorageCodec<TValue> {
   if (typeof migrate !== 'function') {
     throw new TypeError('createMigratingJsonCodec requires a migrate function.');
   }
@@ -94,7 +108,7 @@ export function createMigratingJsonCodec({ migrate }) {
         });
       }
       if (fromVersion === toVersion) {
-        return { value: parsedValue };
+        return { value: parsedValue as TValue };
       }
 
       let migratedValue;

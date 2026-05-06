@@ -1,3 +1,11 @@
+import type {
+  CreateSecureStorageOptions,
+  SecureStorage,
+  SecureStorageCodecContext,
+  SecureStorageDiagnostics,
+  SecureStorageProperty,
+  SecureStorageStoredEnvelope,
+} from './api.ts';
 import {
   SecureStorageAccessError,
   SecureStorageCodecDecodeError,
@@ -20,7 +28,7 @@ import {
  * Diagnostics are intentionally read-only and metadata-only.
  * This keeps operational visibility available without making value inspection part of the main API.
  */
-export function createSecureDiagnostics({ storage }) {
+export function createSecureDiagnostics({ storage }: { storage: SecureStorage }): SecureStorageDiagnostics {
   if (!storage || typeof storage._inspect !== 'function') {
     throw new TypeError('createSecureDiagnostics requires a storage instance with internal inspection support.');
   }
@@ -53,7 +61,7 @@ export function createSecureDiagnostics({ storage }) {
  * Public composition root.
  * Callers provide a ready backend and auth state provider; the storage core owns policy orchestration.
  */
-export async function createSecureStorage(options) {
+export async function createSecureStorage(options: CreateSecureStorageOptions): Promise<SecureStorage> {
   const runtime = createSecureStorageRuntime(options);
 
   return {
@@ -79,7 +87,7 @@ export async function createSecureStorage(options) {
   };
 }
 
-function createSecureStorageRuntime(options) {
+function createSecureStorageRuntime(options: CreateSecureStorageOptions) {
   if (!options || typeof options !== 'object') {
     throw new TypeError('createSecureStorage options must be an object.');
   }
@@ -102,15 +110,14 @@ function createSecureStorageRuntime(options) {
   const cleanupEnabled = Boolean(featureFlags.legacyCleanupEnabled);
 
   return {
-    inspectStoredEnvelope(property) {
-      return storageBackend.readEnvelope(property, 'inspect');
+    inspectStoredEnvelope<TValue>(property: SecureStorageProperty<TValue, any>): Promise<SecureStorageStoredEnvelope<TValue> | null> {
+      return storageBackend.readEnvelope(property, 'inspect') as Promise<SecureStorageStoredEnvelope<TValue> | null>;
     },
 
-    async readPropertyValue(property) {
+    async readPropertyValue<TValue>(property: SecureStorageProperty<TValue, any>): Promise<TValue | null> {
       assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'get');
 
-      // The read order is the core policy: new storage -> legacy fallback -> default value.
       const storedEnvelope = await storageBackend.readEnvelope(property, 'get');
       if (storedEnvelope) {
         return readStoredValue({
@@ -152,7 +159,7 @@ function createSecureStorageRuntime(options) {
       return defaultValue.value;
     },
 
-    async writePropertyValue(property, value) {
+    async writePropertyValue<TValue>(property: SecureStorageProperty<TValue, any>, value: TValue) {
       assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'set');
 
@@ -168,13 +175,13 @@ function createSecureStorageRuntime(options) {
       });
     },
 
-    async removePropertyValue(property) {
+    async removePropertyValue<TValue>(property: SecureStorageProperty<TValue, any>) {
       assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'remove');
       await storageBackend.removeProperty(property, 'remove');
     },
 
-    async hasStoredValue(property) {
+    async hasStoredValue<TValue>(property: SecureStorageProperty<TValue, any>) {
       assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'has');
       const envelope = await storageBackend.readEnvelope(property, 'has');
@@ -185,15 +192,10 @@ function createSecureStorageRuntime(options) {
       const keys = await storageBackend.listKeys();
       const userPrefix = `${STORAGE_KEY_PREFIX}:user:`;
 
-      // Clear only new user-scoped keys. Legacy cleanup remains explicit and separate by design.
-      await Promise.all(
-        keys
-          .filter((key) => key.startsWith(userPrefix))
-          .map((key) => storageBackend.removeKey(key)),
-      );
+      await Promise.all(keys.filter((key) => key.startsWith(userPrefix)).map((key) => storageBackend.removeKey(key)));
     },
 
-    async runPendingLegacyCleanup(properties) {
+    async runPendingLegacyCleanup(properties: ReadonlyArray<SecureStorageProperty<any, any>>) {
       const summary = {
         checked: properties.length,
         pending: 0,
@@ -238,7 +240,7 @@ function createSecureStorageRuntime(options) {
   };
 }
 
-function makeRegisteredPropertyAssertion(registry) {
+function makeRegisteredPropertyAssertion(registry: CreateSecureStorageOptions['registry']) {
   if (!registry) {
     return function assertRegisteredProperty() {};
   }
@@ -247,7 +249,7 @@ function makeRegisteredPropertyAssertion(registry) {
     throw new TypeError('registry must implement get(namespace, name).');
   }
 
-  return function assertRegisteredProperty(property) {
+  return function assertRegisteredProperty(property: SecureStorageProperty<any, any>) {
     const registeredProperty = registry.get(property.namespace, property.name);
 
     if (!registeredProperty) {
@@ -257,14 +259,22 @@ function makeRegisteredPropertyAssertion(registry) {
     }
   };
 }
-async function readStoredValue({
+
+async function readStoredValue<TValue>({
   property,
   storedEnvelope,
   storageBackend,
   codecRegistry,
   now,
   cleanupEnabled,
-}) {
+}: {
+  property: SecureStorageProperty<TValue, any>;
+  storedEnvelope: SecureStorageStoredEnvelope<TValue>;
+  storageBackend: any;
+  codecRegistry: ReturnType<typeof createCodecRegistry>;
+  now: () => Date;
+  cleanupEnabled: boolean;
+}): Promise<TValue> {
   const decoded = decodePropertyValue(property, storedEnvelope, codecRegistry, 'get');
   const normalizedEnvelope = await normalizeDecodedValueIfNeeded({
     property,
@@ -286,14 +296,21 @@ async function readStoredValue({
   return decoded.value;
 }
 
-async function migrateLegacyValueIntoStorage({
+async function migrateLegacyValueIntoStorage<TValue>({
   property,
   value,
   storageBackend,
   codecRegistry,
   now,
   cleanupEnabled,
-}) {
+}: {
+  property: SecureStorageProperty<TValue, any>;
+  value: TValue;
+  storageBackend: any;
+  codecRegistry: ReturnType<typeof createCodecRegistry>;
+  now: () => Date;
+  cleanupEnabled: boolean;
+}): Promise<TValue> {
   const envelope = await persistPropertyValue({
     property,
     value,
@@ -316,13 +333,19 @@ async function migrateLegacyValueIntoStorage({
   return value;
 }
 
-async function normalizeDecodedValueIfNeeded({
+async function normalizeDecodedValueIfNeeded<TValue>({
   property,
   storedEnvelope,
   decoded,
   storageBackend,
   now,
-}) {
+}: {
+  property: SecureStorageProperty<TValue, any>;
+  storedEnvelope: SecureStorageStoredEnvelope<TValue>;
+  decoded: { value: TValue; normalizedEncodedValue?: string };
+  storageBackend: any;
+  now: () => Date;
+}): Promise<SecureStorageStoredEnvelope<TValue>> {
   if (
     typeof decoded !== 'object'
     || decoded === null
@@ -332,14 +355,8 @@ async function normalizeDecodedValueIfNeeded({
     return storedEnvelope;
   }
 
-  // Codecs own normalization semantics; storage owns the write-back metadata lifecycle.
   const normalizedEnvelope = {
-    metadata: createItemMetadata(
-      property,
-      now,
-      storedEnvelope.metadata,
-      storedEnvelope.metadata.legacyCleanupStatus,
-    ),
+    metadata: createItemMetadata(property, now, storedEnvelope.metadata, storedEnvelope.metadata.legacyCleanupStatus),
     encodedValue: decoded.normalizedEncodedValue,
   };
 
@@ -347,13 +364,20 @@ async function normalizeDecodedValueIfNeeded({
   return normalizedEnvelope;
 }
 
-async function runInlineLegacyCleanupIfEnabled({
+async function runInlineLegacyCleanupIfEnabled<TValue>({
   property,
   envelope,
   storageBackend,
   now,
   cleanupEnabled,
   operation,
+}: {
+  property: SecureStorageProperty<TValue, any>;
+  envelope: SecureStorageStoredEnvelope<TValue>;
+  storageBackend: any;
+  now: () => Date;
+  cleanupEnabled: boolean;
+  operation: string;
 }) {
   if (!cleanupEnabled || !property.legacyCleanup) {
     return envelope;
@@ -383,7 +407,6 @@ async function runInlineLegacyCleanupIfEnabled({
       operation,
     });
 
-    // Reads keep succeeding even if cleanup fails; the failure is reflected in cleanup state.
     return {
       ...envelope,
       metadata: {
@@ -394,11 +417,16 @@ async function runInlineLegacyCleanupIfEnabled({
   }
 }
 
-async function runPendingCleanupOnce({
+async function runPendingCleanupOnce<TValue>({
   property,
   envelope,
   storageBackend,
   now,
+}: {
+  property: SecureStorageProperty<TValue, any>;
+  envelope: SecureStorageStoredEnvelope<TValue>;
+  storageBackend: any;
+  now: () => Date;
 }) {
   if (!property.legacyCleanup || envelope.metadata.legacyCleanupStatus !== 'pending') {
     return { outcome: 'skipped', envelope };
@@ -444,16 +472,23 @@ async function runPendingCleanupOnce({
   }
 }
 
-async function updateLegacyCleanupStatus({
+async function updateLegacyCleanupStatus<TValue>({
   property,
   envelope,
   storageBackend,
   now,
   status,
   operation,
+}: {
+  property: SecureStorageProperty<TValue, any>;
+  envelope: SecureStorageStoredEnvelope<TValue>;
+  storageBackend: any;
+  now: () => Date;
+  status: string;
+  operation: string;
 }) {
   const nextEnvelope = {
-    metadata: createItemMetadata(property, now, envelope.metadata, status),
+    metadata: createItemMetadata(property, now, envelope.metadata, status as any),
     encodedValue: envelope.encodedValue,
   };
 
@@ -461,7 +496,7 @@ async function updateLegacyCleanupStatus({
   return nextEnvelope;
 }
 
-async function persistPropertyValue({
+async function persistPropertyValue<TValue>({
   property,
   value,
   storageBackend,
@@ -470,9 +505,18 @@ async function persistPropertyValue({
   operation,
   existingEnvelope = null,
   cleanupStatus = existingEnvelope?.metadata?.legacyCleanupStatus ?? 'notNeeded',
+}: {
+  property: SecureStorageProperty<TValue, any>;
+  value: TValue;
+  storageBackend: any;
+  codecRegistry: ReturnType<typeof createCodecRegistry>;
+  now: () => Date;
+  operation: string;
+  existingEnvelope?: SecureStorageStoredEnvelope<TValue> | null;
+  cleanupStatus?: any;
 }) {
   const metadata = createItemMetadata(property, now, existingEnvelope?.metadata, cleanupStatus);
-  const encodedValue = encodePropertyValue(property, value, metadata, codecRegistry, operation);
+  const encodedValue = encodePropertyValue(property, value, metadata as any, codecRegistry, operation);
   const envelope = {
     metadata,
     encodedValue,
@@ -482,9 +526,9 @@ async function persistPropertyValue({
   return envelope;
 }
 
-async function readLegacyFallbackValue(property) {
+async function readLegacyFallbackValue<TValue>(property: SecureStorageProperty<TValue, any>) {
   if (!property.legacyFallback) {
-    return { hasValue: false, value: null };
+    return { hasValue: false, value: null as TValue | null };
   }
 
   try {
@@ -501,16 +545,17 @@ async function readLegacyFallbackValue(property) {
   }
 }
 
-async function readDefaultValue(property) {
+async function readDefaultValue<TValue>(property: SecureStorageProperty<TValue, any>) {
   if (property.defaultValue === undefined) {
-    return { hasValue: false, value: null };
+    return { hasValue: false, value: null as TValue | null };
   }
 
   try {
     if (typeof property.defaultValue === 'function') {
+      const buildDefaultValue = property.defaultValue as () => TValue | Promise<TValue>;
       return {
         hasValue: true,
-        value: await property.defaultValue(),
+        value: await buildDefaultValue(),
       };
     }
 
@@ -523,10 +568,10 @@ async function readDefaultValue(property) {
       ...createPropertyMetadata(property),
       operation: 'get',
     }, { cause });
+  }
 }
 
-}
-async function assertAccessAllowed(authStateProvider, property, operation) {
+async function assertAccessAllowed(authStateProvider: CreateSecureStorageOptions['authStateProvider'], property: SecureStorageProperty<any, any>, operation: string) {
   const authState = await authStateProvider.getAuthState();
 
   if (property.scope === 'user' && !authState?.hasBoundUser) {
@@ -544,13 +589,18 @@ async function assertAccessAllowed(authStateProvider, property, operation) {
   }
 }
 
-function decodePropertyValue(property, envelope, codecRegistry, operation) {
+function decodePropertyValue<TValue>(
+  property: SecureStorageProperty<TValue, any>,
+  envelope: SecureStorageStoredEnvelope<TValue>,
+  codecRegistry: ReturnType<typeof createCodecRegistry>,
+  operation: string,
+): { value: TValue; normalizedEncodedValue?: string } {
   try {
     const codec = codecRegistry.resolve(property.codec);
     return codec.decode(
       envelope.encodedValue,
-      createCodecContext(property, envelope.metadata, codecRegistry),
-    );
+      createCodecContext(property, envelope.metadata as any, codecRegistry),
+    ) as { value: TValue; normalizedEncodedValue?: string };
   } catch (error) {
     if (error instanceof SecureStorageMigrationError) {
       throw error;
@@ -563,7 +613,13 @@ function decodePropertyValue(property, envelope, codecRegistry, operation) {
   }
 }
 
-function encodePropertyValue(property, value, itemMetadata, codecRegistry, operation) {
+function encodePropertyValue<TValue>(
+  property: SecureStorageProperty<TValue, any>,
+  value: TValue,
+  itemMetadata: any,
+  codecRegistry: ReturnType<typeof createCodecRegistry>,
+  operation: string,
+): string {
   try {
     const codec = codecRegistry.resolve(property.codec);
     return codec.encode(value, createCodecContext(property, itemMetadata, codecRegistry));
@@ -575,7 +631,11 @@ function encodePropertyValue(property, value, itemMetadata, codecRegistry, opera
   }
 }
 
-function createCodecContext(property, itemMetadata, codecRegistry) {
+function createCodecContext(
+  property: SecureStorageProperty<any, any>,
+  itemMetadata: any,
+  codecRegistry: ReturnType<typeof createCodecRegistry>,
+): SecureStorageCodecContext {
   return {
     propertyMetadata: createPropertyMetadata(property),
     itemMetadata,

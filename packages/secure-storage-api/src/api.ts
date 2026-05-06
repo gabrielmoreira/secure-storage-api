@@ -11,6 +11,164 @@ export const secureStorageAccessModes = Object.freeze(['default', 'activeSession
 export const secureStorageCodecNames = Object.freeze(['string', 'number', 'boolean', 'json']);
 export const secureStorageLegacyCleanupStatuses = Object.freeze(['notNeeded', 'pending', 'succeeded', 'failed']);
 
+export type SecureStorageScope = (typeof secureStorageScopes)[number];
+export type SecureStorageAccessMode = (typeof secureStorageAccessModes)[number];
+export type SecureStorageCodecName = (typeof secureStorageCodecNames)[number];
+export type SecureStorageLegacyCleanupStatus = (typeof secureStorageLegacyCleanupStatuses)[number];
+
+export interface SecureStoragePropertyMetadata {
+  namespace: string;
+  name: string;
+  scope: SecureStorageScope;
+  access: SecureStorageAccessMode;
+  version: number;
+}
+
+export interface SecureStorageItemMetadata {
+  namespace: string;
+  name: string;
+  scope: SecureStorageScope;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  legacyCleanupStatus: SecureStorageLegacyCleanupStatus;
+}
+
+export interface SecureStorageCodecContext {
+  propertyMetadata: SecureStoragePropertyMetadata;
+  itemMetadata: SecureStorageItemMetadata;
+  codecs: Record<string, SecureStorageCodec<unknown>>;
+}
+
+export interface SecureStorageDecodeResult<TValue> {
+  value: TValue;
+  normalizedEncodedValue?: string;
+}
+
+export interface SecureStorageCodec<TValue> {
+  encode(value: TValue, context: SecureStorageCodecContext): string;
+  decode(encodedValue: string, context: SecureStorageCodecContext): SecureStorageDecodeResult<TValue>;
+}
+
+export interface SecureStorageBackendAccessOptions {
+  requiresUserPresence: boolean;
+}
+
+export interface SecureStorageBackend {
+  getItem(key: string, options?: SecureStorageBackendAccessOptions): Promise<string | null> | string | null;
+  setItem(key: string, value: string, options?: SecureStorageBackendAccessOptions): Promise<void> | void;
+  removeItem(key: string, options?: SecureStorageBackendAccessOptions): Promise<void> | void;
+  getAllKeys(): Promise<string[]> | string[];
+}
+
+export interface SecureStorageAuthState {
+  hasBoundUser?: boolean;
+  hasActiveSession?: boolean;
+}
+
+export interface SecureStorageAuthStateProvider {
+  getAuthState(): Promise<SecureStorageAuthState | null | undefined> | SecureStorageAuthState | null | undefined;
+}
+
+export interface SecureStorageFeatureFlags {
+  legacyCleanupEnabled?: boolean;
+}
+
+export type SecureStorageCodecValue<TCodec> =
+  TCodec extends 'string' ? string :
+  TCodec extends 'number' ? number :
+  TCodec extends 'boolean' ? boolean :
+  TCodec extends 'json' ? unknown :
+  TCodec extends SecureStorageCodec<infer TValue> ? TValue :
+  never;
+
+export interface SecureStorageProperty<TValue = string, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue> = 'string'> {
+  namespace: string;
+  name: string;
+  scope: SecureStorageScope;
+  access: SecureStorageAccessMode;
+  version: number;
+  codec: TCodec;
+  defaultValue?: TValue | (() => TValue | Promise<TValue>);
+  legacyFallback?: () => TValue | null | Promise<TValue | null>;
+  legacyCleanup?: () => void | Promise<void>;
+}
+
+type SecureStoragePropertyInputBase<TValue, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue>> = {
+  namespace: string;
+  name: string;
+  scope?: SecureStorageScope;
+  access?: SecureStorageAccessMode;
+  version?: number;
+  codec?: TCodec;
+  defaultValue?: TValue | (() => TValue | Promise<TValue>);
+  legacyFallback?: () => TValue | null | Promise<TValue | null>;
+  legacyCleanup?: () => void | Promise<void>;
+};
+
+export interface SecureStorageCleanupSummary {
+  checked: number;
+  pending: number;
+  succeeded: number;
+  failed: number;
+  skipped: number;
+}
+
+export interface SecureStorageStoredEnvelope<TValue = unknown> {
+  metadata: SecureStorageItemMetadata;
+  encodedValue: string;
+  _value?: TValue;
+}
+
+export interface SecureStorageDiagnosticsEntry {
+  namespace: string;
+  name: string;
+  scope: SecureStorageScope;
+  access: SecureStorageAccessMode;
+  version: number;
+  exists: boolean;
+  legacyCleanupStatus: SecureStorageLegacyCleanupStatus | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface SecureStorage {
+  get<TValue>(property: SecureStorageProperty<TValue, any>): Promise<TValue | null>;
+  set<TValue>(property: SecureStorageProperty<TValue, any>, value: TValue): Promise<void>;
+  remove<TValue>(property: SecureStorageProperty<TValue, any>): Promise<void>;
+  has<TValue>(property: SecureStorageProperty<TValue, any>): Promise<boolean>;
+  clearUserStorage(): Promise<void>;
+  runLegacyCleanup(properties: ReadonlyArray<SecureStorageProperty<any, any>>): Promise<SecureStorageCleanupSummary>;
+  _inspect<TValue>(property: SecureStorageProperty<TValue, any>): Promise<SecureStorageStoredEnvelope<TValue> | null>;
+}
+
+export interface SecureStorageDiagnostics {
+  inspectProperties(properties: ReadonlyArray<SecureStorageProperty<any, any>>): Promise<SecureStorageDiagnosticsEntry[]>;
+}
+
+export interface CreateSecureStorageOptions {
+  backend: SecureStorageBackend;
+  authStateProvider: SecureStorageAuthStateProvider;
+  registry?: SecureStoragePropertyRegistry | null;
+  featureFlags?: SecureStorageFeatureFlags;
+  now?: () => Date;
+}
+
+export interface SecureStoragePropertyRegistry {
+  register<TValue, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue>>(
+    property: SecureStorageProperty<TValue, TCodec>,
+  ): SecureStorageProperty<TValue, TCodec>;
+  defineProperty(input: SecureStoragePropertyInputBase<string, 'string'> & { codec?: undefined | 'string' }): SecureStorageProperty<string, 'string'>;
+  defineProperty(input: SecureStoragePropertyInputBase<number, 'number'> & { codec: 'number' }): SecureStorageProperty<number, 'number'>;
+  defineProperty(input: SecureStoragePropertyInputBase<boolean, 'boolean'> & { codec: 'boolean' }): SecureStorageProperty<boolean, 'boolean'>;
+  defineProperty<TValue>(input: SecureStoragePropertyInputBase<TValue, 'json'> & { codec: 'json' }): SecureStorageProperty<TValue, 'json'>;
+  defineProperty<TValue, TCodec extends SecureStorageCodec<TValue>>(
+    input: SecureStoragePropertyInputBase<TValue, TCodec> & { codec: TCodec },
+  ): SecureStorageProperty<TValue, TCodec>;
+  get(namespace: string, name: string): SecureStorageProperty<any, any> | null;
+  list(): Array<SecureStorageProperty<any, any>>;
+}
+
 function createErrorClass(name, code) {
   return class extends SecureStorageError {
     constructor(message, metadata = {}, options = {}) {
@@ -28,7 +186,7 @@ export class SecureStorageError extends Error {
   code;
   metadata;
 
-  constructor(message, code, metadata = {}, options = {}) {
+  constructor(message: string, code: string, metadata = {}, options = {}) {
     super(message, options);
     this.name = 'SecureStorageError';
     this.code = code;
@@ -49,26 +207,26 @@ export const SecureStorageMetadataError = createErrorClass('SecureStorageMetadat
 /**
  * Codec resolution stays tiny on purpose.
  * String refs are ergonomic for common cases; object refs keep extension easy later.
- * @param {{ builtInCodecs?: Record<string, { encode: (...args: unknown[]) => unknown, decode: (...args: unknown[]) => unknown }> }} [options]
+ * @param {{ builtInCodecs?: Record<string, SecureStorageCodec<unknown>> }} [options]
  */
 export function createCodecRegistry(options = {}) {
-  const builtInCodecs = options?.['builtInCodecs'];
+  const builtInCodecs = options?.['builtInCodecs'] ?? {};
 
   return {
     builtInCodecs,
-    resolve(codecRef) {
+    resolve<TValue, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue>>(codecRef: TCodec): TCodec extends SecureStorageCodecName ? SecureStorageCodec<SecureStorageCodecValue<TCodec>> : TCodec {
       const codecs = builtInCodecs;
       if (typeof codecRef === 'string') {
         const codec = codecs[codecRef];
         if (!codec) {
           throw new TypeError(`Unknown codec: ${codecRef}.`);
         }
-        return codec;
+        return codec as any;
       }
       if (!codecRef || typeof codecRef.encode !== 'function' || typeof codecRef.decode !== 'function') {
         throw new TypeError('Codec reference must be a built-in codec name or a codec object.');
       }
-      return codecRef;
+      return codecRef as any;
     },
   };
 }
@@ -77,14 +235,16 @@ export function createCodecRegistry(options = {}) {
  * Optional registry for teams that want one central inventory of declared properties.
  * The core API does not require it, but it helps governance and diagnostics.
  */
-export function createPropertyRegistry() {
+export function createPropertyRegistry(): SecureStoragePropertyRegistry {
   const properties = new Map();
 
-  function toKey(namespace, name) {
+  function toKey(namespace: string, name: string) {
     return `${namespace}:${name}`;
   }
 
-  function register(property) {
+  function register<TValue, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue>>(
+    property: SecureStorageProperty<TValue, TCodec>,
+  ): SecureStorageProperty<TValue, TCodec> {
     const key = toKey(property.namespace, property.name);
     if (properties.has(key)) {
       throw new Error(`Property ${key} is already registered.`);
@@ -93,11 +253,13 @@ export function createPropertyRegistry() {
     return property;
   }
 
+  const defineProperty = ((input: SecureStoragePropertyInputBase<any, any>) => {
+    return register(defineSecureStorageProperty(input));
+  }) as SecureStoragePropertyRegistry['defineProperty'];
+
   return {
     register,
-    defineProperty(input) {
-      return register(defineSecureStorageProperty(input));
-    },
+    defineProperty,
     get(namespace, name) {
       return properties.get(toKey(namespace, name)) ?? null;
     },
@@ -111,7 +273,22 @@ export function createPropertyRegistry() {
  * Public property definition helper.
  * This is the semantic center for property defaults, so callers stay terse at use sites.
  */
-export function defineSecureStorageProperty(input) {
+export function defineSecureStorageProperty(
+  input: SecureStoragePropertyInputBase<string, 'string'> & { codec?: undefined | 'string' },
+): SecureStorageProperty<string, 'string'>;
+export function defineSecureStorageProperty(
+  input: SecureStoragePropertyInputBase<number, 'number'> & { codec: 'number' },
+): SecureStorageProperty<number, 'number'>;
+export function defineSecureStorageProperty(
+  input: SecureStoragePropertyInputBase<boolean, 'boolean'> & { codec: 'boolean' },
+): SecureStorageProperty<boolean, 'boolean'>;
+export function defineSecureStorageProperty<TValue>(
+  input: SecureStoragePropertyInputBase<TValue, 'json'> & { codec: 'json' },
+): SecureStorageProperty<TValue, 'json'>;
+export function defineSecureStorageProperty<TValue, TCodec extends SecureStorageCodec<TValue>>(
+  input: SecureStoragePropertyInputBase<TValue, TCodec> & { codec: TCodec },
+): SecureStorageProperty<TValue, TCodec>;
+export function defineSecureStorageProperty(input: any): SecureStorageProperty<any, any> {
   if (!input || typeof input !== 'object') {
     throw new TypeError('Property input must be an object.');
   }
