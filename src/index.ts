@@ -166,6 +166,55 @@ export const builtInCodecs = Object.freeze({
   },
 });
 
+export function createMigratingJsonCodec({ migrate }) {
+  if (typeof migrate !== 'function') {
+    throw new TypeError('createMigratingJsonCodec requires a migrate function.');
+  }
+
+  return {
+    encode(value) {
+      return JSON.stringify(value);
+    },
+    decode(encodedValue, context) {
+      const parsedValue = JSON.parse(encodedValue);
+      const fromVersion = context.itemMetadata.version;
+      const toVersion = context.propertyMetadata.version;
+
+      if (fromVersion > toVersion) {
+        throw new SecureStorageMigrationError('Stored version is newer than the property version.', {
+          ...context.propertyMetadata,
+          operation: 'get',
+        });
+      }
+
+      if (fromVersion === toVersion) {
+        return { value: parsedValue };
+      }
+
+      let migratedValue;
+      try {
+        migratedValue = migrate({
+          value: parsedValue,
+          fromVersion,
+          toVersion,
+          itemMetadata: context.itemMetadata,
+          propertyMetadata: context.propertyMetadata,
+        });
+      } catch (cause) {
+        throw new SecureStorageMigrationError('Value migration failed.', {
+          ...context.propertyMetadata,
+          operation: 'get',
+        }, { cause });
+      }
+
+      return {
+        value: migratedValue,
+        normalizedEncodedValue: JSON.stringify(migratedValue),
+      };
+    },
+  };
+}
+
 export function createCodecRegistry({ builtInCodecs: codecs = builtInCodecs } = {}) {
   return {
     builtInCodecs: codecs,
@@ -437,11 +486,15 @@ function decodeStoredValue(property, envelope, codecRegistry, operation) {
       envelope.encodedValue,
       createCodecContext(property, envelope.metadata, codecRegistry),
     );
-  } catch (cause) {
+  } catch (error) {
+    if (error instanceof SecureStorageMigrationError) {
+      throw error;
+    }
+
     throw new SecureStorageCodecDecodeError('Codec decode failed.', {
       ...createPropertyMetadata(property),
       operation,
-    }, { cause });
+    }, { cause: error });
   }
 }
 
@@ -482,8 +535,17 @@ async function resolveDefaultValue(property, operation) {
   }
 }
 
-async function persistValue(backend, property, value, codecRegistry, now, operation, existingEnvelope = null) {
-  const metadata = createItemMetadata(property, now, existingEnvelope?.metadata);
+async function persistValue(
+  backend,
+  property,
+  value,
+  codecRegistry,
+  now,
+  operation,
+  existingEnvelope = null,
+  cleanupStatus = existingEnvelope?.metadata?.legacyCleanupStatus ?? 'notNeeded',
+) {
+  const metadata = createItemMetadata(property, now, existingEnvelope?.metadata, cleanupStatus);
   const encodedValue = encodeStoredValue(property, value, metadata, codecRegistry, operation);
   const envelope = {
     metadata,
@@ -494,6 +556,89 @@ async function persistValue(backend, property, value, codecRegistry, now, operat
   return envelope;
 }
 
+async function resolveLegacyFallback(property, operation) {
+  if (!property.legacyFallback) {
+    return { hasValue: false, value: null };
+  }
+
+  try {
+    const value = await property.legacyFallback();
+    return {
+      hasValue: value !== null,
+      value,
+    };
+  } catch (cause) {
+    throw new SecureStorageLegacyFallbackError('Legacy fallback failed.', {
+      ...createPropertyMetadata(property),
+      operation,
+    }, { cause });
+  }
+}
+
+async function updateCleanupStatus(backend, property, envelope, now, status, operation) {
+  const nextEnvelope = {
+    metadata: createItemMetadata(property, now, envelope.metadata, status),
+    encodedValue: envelope.encodedValue,
+  };
+
+  await writeEnvelopeToBackend(backend, property, nextEnvelope, operation);
+  return nextEnvelope;
+}
+
+async function maybeRunLegacyCleanup(backend, property, envelope, now, enabled, operation) {
+  if (!enabled || !property.legacyCleanup) {
+    return envelope;
+  }
+
+  if (envelope.metadata.legacyCleanupStatus !== 'pending') {
+    return envelope;
+  }
+
+  try {
+    await property.legacyCleanup();
+    return await updateCleanupStatus(backend, property, envelope, now, 'succeeded', operation);
+  } catch (cause) {
+    await updateCleanupStatus(backend, property, envelope, now, 'failed', operation);
+    return {
+      ...envelope,
+      metadata: {
+        ...envelope.metadata,
+        legacyCleanupStatus: 'failed',
+      },
+    };
+  }
+}
+
+async function runOneLegacyCleanup(backend, property, envelope, now) {
+  if (!property.legacyCleanup || envelope.metadata.legacyCleanupStatus !== 'pending') {
+    return { outcome: 'skipped', envelope };
+  }
+
+  try {
+    await property.legacyCleanup();
+    return {
+      outcome: 'succeeded',
+      envelope: await updateCleanupStatus(backend, property, envelope, now, 'succeeded', 'runLegacyCleanup'),
+    };
+  } catch (cause) {
+    await updateCleanupStatus(backend, property, envelope, now, 'failed', 'runLegacyCleanup');
+    return {
+      outcome: 'failed',
+      envelope: {
+        ...envelope,
+        metadata: {
+          ...envelope.metadata,
+          legacyCleanupStatus: 'failed',
+        },
+      },
+      error: new SecureStorageLegacyCleanupError('Legacy cleanup failed.', {
+        ...createPropertyMetadata(property),
+        operation: 'runLegacyCleanup',
+      }, { cause }),
+    };
+  }
+}
+
 export async function createSecureStorage(options) {
   if (!options || typeof options !== 'object') {
     throw new TypeError('createSecureStorage options must be an object.');
@@ -502,6 +647,7 @@ export async function createSecureStorage(options) {
   const {
     backend,
     authStateProvider,
+    featureFlags = {},
     now = () => new Date(),
   } = options;
 
@@ -514,6 +660,7 @@ export async function createSecureStorage(options) {
   }
 
   const codecRegistry = createCodecRegistry();
+  const cleanupEnabled = Boolean(featureFlags.legacyCleanupEnabled);
 
   async function inspectEnvelope(property) {
     return readEnvelopeFromBackend(backend, property, 'inspect');
@@ -522,7 +669,7 @@ export async function createSecureStorage(options) {
   return {
     async get(property) {
       await assertAccess(authStateProvider, property, 'get');
-      const envelope = await readEnvelopeFromBackend(backend, property, 'get');
+      let envelope = await readEnvelopeFromBackend(backend, property, 'get');
 
       if (envelope) {
         const decoded = decodeStoredValue(property, envelope, codecRegistry, 'get');
@@ -533,13 +680,48 @@ export async function createSecureStorage(options) {
           && typeof decoded.normalizedEncodedValue === 'string'
           && decoded.normalizedEncodedValue !== envelope.encodedValue
         ) {
-          await writeEnvelopeToBackend(backend, property, {
-            metadata: createItemMetadata(property, now, envelope.metadata),
+          envelope = {
+            metadata: createItemMetadata(property, now, envelope.metadata, envelope.metadata.legacyCleanupStatus),
             encodedValue: decoded.normalizedEncodedValue,
-          }, 'get');
+          };
+          await writeEnvelopeToBackend(backend, property, envelope, 'get');
         }
 
+        envelope = await maybeRunLegacyCleanup(
+          backend,
+          property,
+          envelope,
+          now,
+          cleanupEnabled,
+          'get',
+        );
+
         return decoded.value;
+      }
+
+      const legacyResult = await resolveLegacyFallback(property, 'get');
+      if (legacyResult.hasValue) {
+        envelope = await persistValue(
+          backend,
+          property,
+          legacyResult.value,
+          codecRegistry,
+          now,
+          'get',
+          null,
+          property.legacyCleanup ? 'pending' : 'notNeeded',
+        );
+
+        await maybeRunLegacyCleanup(
+          backend,
+          property,
+          envelope,
+          now,
+          cleanupEnabled,
+          'get',
+        );
+
+        return legacyResult.value;
       }
 
       const defaultResult = await resolveDefaultValue(property, 'get');
@@ -578,6 +760,43 @@ export async function createSecureStorage(options) {
           .filter((key) => key.startsWith(userPrefix))
           .map((key) => backend.removeItem(key)),
       );
+    },
+
+    async runLegacyCleanup(properties) {
+      const summary = {
+        checked: properties.length,
+        pending: 0,
+        succeeded: 0,
+        failed: 0,
+        skipped: 0,
+      };
+
+      if (!cleanupEnabled) {
+        summary.skipped = properties.length;
+        return summary;
+      }
+
+      for (const property of properties) {
+        const envelope = await readEnvelopeFromBackend(backend, property, 'runLegacyCleanup');
+
+        if (!envelope || envelope.metadata.legacyCleanupStatus !== 'pending') {
+          summary.skipped += 1;
+          continue;
+        }
+
+        summary.pending += 1;
+        const result = await runOneLegacyCleanup(backend, property, envelope, now);
+
+        if (result.outcome === 'succeeded') {
+          summary.succeeded += 1;
+        } else if (result.outcome === 'failed') {
+          summary.failed += 1;
+        } else {
+          summary.skipped += 1;
+        }
+      }
+
+      return summary;
     },
 
     _inspect: inspectEnvelope,
