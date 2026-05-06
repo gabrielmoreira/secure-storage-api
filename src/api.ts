@@ -84,14 +84,19 @@ export function createPropertyRegistry() {
     return `${namespace}:${name}`;
   }
 
+  function register(property) {
+    const key = toKey(property.namespace, property.name);
+    if (properties.has(key)) {
+      throw new Error(`Property ${key} is already registered.`);
+    }
+    properties.set(key, property);
+    return property;
+  }
+
   return {
-    register(property) {
-      const key = toKey(property.namespace, property.name);
-      if (properties.has(key)) {
-        throw new Error(`Property ${key} is already registered.`);
-      }
-      properties.set(key, property);
-      return property;
+    register,
+    defineProperty(input) {
+      return register(defineSecureStorageProperty(input));
     },
     get(namespace, name) {
       return properties.get(toKey(namespace, name)) ?? null;

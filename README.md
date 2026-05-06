@@ -187,17 +187,14 @@ Use it when you want one central inventory of secure properties and stricter run
 import {
   createPropertyRegistry,
   createSecureStorage,
-  defineSecureStorageProperty,
 } from './src/index.ts';
 
 const registry = createPropertyRegistry();
 
-const refreshToken = registry.register(
-  defineSecureStorageProperty({
-    namespace: 'auth',
-    name: 'refreshToken',
-  }),
-);
+const refreshToken = registry.defineProperty({
+  namespace: 'auth',
+  name: 'refreshToken',
+});
 
 const secureStorage = await createSecureStorage({
   backend,
@@ -205,6 +202,8 @@ const secureStorage = await createSecureStorage({
   registry,
 });
 ```
+
+You can still use `registry.register(defineSecureStorageProperty(...))` when the property is created elsewhere.
 
 What the registry gives you:
 

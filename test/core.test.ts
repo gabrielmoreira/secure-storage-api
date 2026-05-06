@@ -149,3 +149,20 @@ test('property registry rejects duplicate namespace plus name combinations', () 
   // Then
   assert.throws(() => registry.register(second), /already registered/i);
 });
+
+test('property registry can define and register a property in one step', () => {
+  // Given
+  const registry = createPropertyRegistry();
+
+  // When
+  const property = registry.defineProperty({
+    namespace: 'auth',
+    name: 'refreshToken',
+  });
+
+  // Then
+  assert.equal(registry.get('auth', 'refreshToken'), property);
+  assert.deepEqual(registry.list(), [property]);
+  assert.equal(property.namespace, 'auth');
+  assert.equal(property.name, 'refreshToken');
+});
