@@ -1,3 +1,7 @@
+/**
+ * Public package exports.
+ * Keep this barrel explicit so package consumers see one stable surface.
+ */
 export {
   secureStorageScopes,
   secureStorageAccessModes,

@@ -1,8 +1,6 @@
-import {
-  SecureStorageCodecDecodeError,
-  SecureStorageMigrationError,
-} from './api.ts';
+import { SecureStorageCodecDecodeError, SecureStorageMigrationError } from './api.ts';
 
+/** Built-ins stay exported so custom codecs can compose on top without copying logic. */
 export const builtInCodecs = Object.freeze({
   string: {
     encode(value) {
@@ -17,16 +15,13 @@ export const builtInCodecs = Object.freeze({
       if (typeof value !== 'number' || Number.isNaN(value)) {
         throw new TypeError('Number codec expects a valid number.');
       }
-
       return String(value);
     },
     decode(encodedValue) {
       const value = Number(encodedValue);
-
       if (Number.isNaN(value)) {
         throw new TypeError('Number codec could not decode the stored value.');
       }
-
       return { value };
     },
   },
@@ -35,14 +30,12 @@ export const builtInCodecs = Object.freeze({
       if (typeof value !== 'boolean') {
         throw new TypeError('Boolean codec expects a boolean.');
       }
-
       return value ? 'true' : 'false';
     },
     decode(encodedValue) {
       if (encodedValue !== 'true' && encodedValue !== 'false') {
         throw new TypeError('Boolean codec could not decode the stored value.');
       }
-
       return { value: encodedValue === 'true' };
     },
   },
@@ -56,6 +49,7 @@ export const builtInCodecs = Object.freeze({
   },
 });
 
+/** This stays dependency-free on purpose. Any schema object with parse() can adapt here. */
 export function createZodJsonCodec(schemaLike) {
   if (!schemaLike || typeof schemaLike.parse !== 'function') {
     throw new TypeError('createZodJsonCodec expects a schema-like object with a parse() method.');
@@ -68,9 +62,7 @@ export function createZodJsonCodec(schemaLike) {
     decode(encodedValue, context) {
       try {
         const parsed = JSON.parse(encodedValue);
-        return {
-          value: schemaLike.parse(parsed),
-        };
+        return { value: schemaLike.parse(parsed) };
       } catch (cause) {
         throw new SecureStorageCodecDecodeError('Schema-based JSON codec decode failed.', {
           ...context.propertyMetadata,
@@ -81,6 +73,7 @@ export function createZodJsonCodec(schemaLike) {
   };
 }
 
+/** Migration belongs to codecs so version-specific shape evolution stays close to the value itself. */
 export function createMigratingJsonCodec({ migrate }) {
   if (typeof migrate !== 'function') {
     throw new TypeError('createMigratingJsonCodec requires a migrate function.');
@@ -94,14 +87,12 @@ export function createMigratingJsonCodec({ migrate }) {
       const parsedValue = JSON.parse(encodedValue);
       const fromVersion = context.itemMetadata.version;
       const toVersion = context.propertyMetadata.version;
-
       if (fromVersion > toVersion) {
         throw new SecureStorageMigrationError('Stored version is newer than the property version.', {
           ...context.propertyMetadata,
           operation: 'get',
         });
       }
-
       if (fromVersion === toVersion) {
         return { value: parsedValue };
       }

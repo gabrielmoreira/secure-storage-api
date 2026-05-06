@@ -18,6 +18,10 @@ export function assertPositiveInteger(value, fieldName) {
   }
 }
 
+/**
+ * Safe metadata is intentionally narrow.
+ * This helper is the last line of defense against accidental value leakage in errors.
+ */
 export function freezeSafeMetadata(metadata) {
   const safeMetadata = {};
 
@@ -49,6 +53,10 @@ export function createPropertyMetadata(property) {
   };
 }
 
+/**
+ * User presence is expressed as a generic access hint so the backend can adapt later
+ * without the core naming itself after biometrics or one platform API.
+ */
 export function createBackendAccessOptions(property) {
   return {
     requiresUserPresence: property.access === 'userPresence',

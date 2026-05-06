@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import * as secureStorageApi from '../src/index.ts';
 
 test('public entry exports the planned bootstrap surface', () => {
+  // Then
   assert.equal(typeof secureStorageApi.createSecureStorage, 'function');
   assert.equal(typeof secureStorageApi.createMemorySecureStorageBackend, 'function');
   assert.equal(typeof secureStorageApi.defineSecureStorageProperty, 'function');
@@ -11,6 +12,7 @@ test('public entry exports the planned bootstrap surface', () => {
 });
 
 test('public entry exposes built-in codec names needed by the spec', () => {
+  // Then
   assert.deepEqual(Object.keys(secureStorageApi.builtInCodecs).sort(), [
     'boolean',
     'json',
@@ -20,6 +22,7 @@ test('public entry exposes built-in codec names needed by the spec', () => {
 });
 
 test('createSecureStorage returns the core storage methods once the engine exists', async () => {
+  // Given
   const storage = await secureStorageApi.createSecureStorage({
     backend: secureStorageApi.createMemorySecureStorageBackend(),
     authStateProvider: {
@@ -32,6 +35,7 @@ test('createSecureStorage returns the core storage methods once the engine exist
     },
   });
 
+  // Then
   assert.equal(typeof storage.get, 'function');
   assert.equal(typeof storage.set, 'function');
   assert.equal(typeof storage.remove, 'function');
@@ -40,11 +44,13 @@ test('createSecureStorage returns the core storage methods once the engine exist
 });
 
 test('defineSecureStorageProperty applies spec defaults in bootstrap slice', () => {
+  // When
   const property = secureStorageApi.defineSecureStorageProperty({
     namespace: 'auth',
     name: 'refreshToken',
   });
 
+  // Then
   assert.deepEqual(property, {
     namespace: 'auth',
     name: 'refreshToken',

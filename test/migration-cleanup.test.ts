@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 import {
   SecureStorageDefaultValueError,
-  SecureStorageLegacyCleanupError,
   SecureStorageLegacyFallbackError,
   SecureStorageMigrationError,
   createMemorySecureStorageBackend,
@@ -21,16 +20,12 @@ function createAuthStateProvider(state) {
 }
 
 test('legacy fallback migrates the value into new storage and marks cleanup as pending', async () => {
+  // Given
   let legacyReads = 0;
-
   const storage = await createSecureStorage({
     backend: createMemorySecureStorageBackend(),
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
   });
-
   const property = defineSecureStorageProperty({
     namespace: 'auth',
     name: 'refreshToken',
@@ -41,25 +36,25 @@ test('legacy fallback migrates the value into new storage and marks cleanup as p
     legacyCleanup: async () => {},
   });
 
-  assert.equal(await storage.get(property), 'legacy-token');
-  assert.equal(await storage.get(property), 'legacy-token');
-  assert.equal(legacyReads, 1);
-
+  // When
+  const first = await storage.get(property);
+  const second = await storage.get(property);
   const item = await storage._inspect(property);
+
+  // Then
+  assert.equal(first, 'legacy-token');
+  assert.equal(second, 'legacy-token');
+  assert.equal(legacyReads, 1);
   assert.equal(item.metadata.legacyCleanupStatus, 'pending');
 });
 
 test('legacy cleanup stays pending by default when cleanup execution is disabled', async () => {
+  // Given
   let cleanupRuns = 0;
-
   const storage = await createSecureStorage({
     backend: createMemorySecureStorageBackend(),
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
   });
-
   const property = defineSecureStorageProperty({
     namespace: 'auth',
     name: 'refreshToken',
@@ -69,23 +64,24 @@ test('legacy cleanup stays pending by default when cleanup execution is disabled
     },
   });
 
-  assert.equal(await storage.get(property), 'legacy-token');
+  // When
+  const value = await storage.get(property);
+  const item = await storage._inspect(property);
+
+  // Then
+  assert.equal(value, 'legacy-token');
   assert.equal(cleanupRuns, 0);
-  assert.equal((await storage._inspect(property)).metadata.legacyCleanupStatus, 'pending');
+  assert.equal(item.metadata.legacyCleanupStatus, 'pending');
 });
 
 test('runLegacyCleanup executes pending cleanups at most once and marks success', async () => {
+  // Given
   let cleanupRuns = 0;
   const backend = createMemorySecureStorageBackend();
-
   const migrateOnlyStorage = await createSecureStorage({
     backend,
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
   });
-
   const property = defineSecureStorageProperty({
     namespace: 'auth',
     name: 'refreshToken',
@@ -94,31 +90,27 @@ test('runLegacyCleanup executes pending cleanups at most once and marks success'
       cleanupRuns += 1;
     },
   });
-
   await migrateOnlyStorage.get(property);
-
   const cleanupStorage = await createSecureStorage({
     backend,
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
-    featureFlags: {
-      legacyCleanupEnabled: true,
-    },
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
+    featureFlags: { legacyCleanupEnabled: true },
   });
 
-  assert.deepEqual(await cleanupStorage.runLegacyCleanup([property]), {
+  // When
+  const first = await cleanupStorage.runLegacyCleanup([property]);
+  const second = await cleanupStorage.runLegacyCleanup([property]);
+  const item = await cleanupStorage._inspect(property);
+
+  // Then
+  assert.deepEqual(first, {
     checked: 1,
     pending: 1,
     succeeded: 1,
     failed: 0,
     skipped: 0,
   });
-  assert.equal(cleanupRuns, 1);
-  assert.equal((await cleanupStorage._inspect(property)).metadata.legacyCleanupStatus, 'succeeded');
-
-  assert.deepEqual(await cleanupStorage.runLegacyCleanup([property]), {
+  assert.deepEqual(second, {
     checked: 1,
     pending: 0,
     succeeded: 0,
@@ -126,22 +118,17 @@ test('runLegacyCleanup executes pending cleanups at most once and marks success'
     skipped: 1,
   });
   assert.equal(cleanupRuns, 1);
+  assert.equal(item.metadata.legacyCleanupStatus, 'succeeded');
 });
 
 test('cleanup failure does not block reads and marks the item as failed', async () => {
+  // Given
   let cleanupRuns = 0;
-
   const storage = await createSecureStorage({
     backend: createMemorySecureStorageBackend(),
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
-    featureFlags: {
-      legacyCleanupEnabled: true,
-    },
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
+    featureFlags: { legacyCleanupEnabled: true },
   });
-
   const property = defineSecureStorageProperty({
     namespace: 'auth',
     name: 'refreshToken',
@@ -152,22 +139,24 @@ test('cleanup failure does not block reads and marks the item as failed', async 
     },
   });
 
-  assert.equal(await storage.get(property), 'legacy-token');
+  // When
+  const first = await storage.get(property);
+  const item = await storage._inspect(property);
+  const second = await storage.get(property);
+
+  // Then
+  assert.equal(first, 'legacy-token');
+  assert.equal(second, 'legacy-token');
   assert.equal(cleanupRuns, 1);
-  assert.equal((await storage._inspect(property)).metadata.legacyCleanupStatus, 'failed');
-  assert.equal(await storage.get(property), 'legacy-token');
-  assert.equal(cleanupRuns, 1);
+  assert.equal(item.metadata.legacyCleanupStatus, 'failed');
 });
 
 test('legacy fallback failures are wrapped in typed safe errors', async () => {
+  // Given
   const storage = await createSecureStorage({
     backend: createMemorySecureStorageBackend(),
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
   });
-
   const property = defineSecureStorageProperty({
     namespace: 'auth',
     name: 'refreshToken',
@@ -177,6 +166,7 @@ test('legacy fallback failures are wrapped in typed safe errors', async () => {
     legacyCleanup: async () => {},
   });
 
+  // Then
   await assert.rejects(
     () => storage.get(property),
     (error) => error instanceof SecureStorageLegacyFallbackError && error.metadata.name === 'refreshToken',
@@ -184,14 +174,11 @@ test('legacy fallback failures are wrapped in typed safe errors', async () => {
 });
 
 test('default value failures are wrapped in typed safe errors', async () => {
+  // Given
   const storage = await createSecureStorage({
     backend: createMemorySecureStorageBackend(),
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
   });
-
   const property = defineSecureStorageProperty({
     namespace: 'profile',
     name: 'preferences',
@@ -201,6 +188,7 @@ test('default value failures are wrapped in typed safe errors', async () => {
     },
   });
 
+  // Then
   await assert.rejects(
     () => storage.get(property),
     (error) => error instanceof SecureStorageDefaultValueError && error.metadata.name === 'preferences',
@@ -208,21 +196,17 @@ test('default value failures are wrapped in typed safe errors', async () => {
 });
 
 test('migrating codec upgrades old stored values and writes back the latest version', async () => {
+  // Given
   const backend = createMemorySecureStorageBackend();
   const storage = await createSecureStorage({
     backend,
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
   });
-
   const profileCodec = createMigratingJsonCodec({
     migrate({ value, fromVersion, toVersion }) {
       if (toVersion !== 3) {
         throw new Error('unsupported target');
       }
-
       if (fromVersion === 1) {
         return {
           customerId: value.customerId,
@@ -230,22 +214,18 @@ test('migrating codec upgrades old stored values and writes back the latest vers
           preferredAccountType: 'current',
         };
       }
-
       if (fromVersion === 3) {
         return value;
       }
-
       throw new Error(`unsupported version ${fromVersion}`);
     },
   });
-
   const property = defineSecureStorageProperty({
     namespace: 'profile',
     name: 'secureUserProfile',
     version: 3,
     codec: profileCodec,
   });
-
   await backend.setItem(
     'secure-storage:user:profile:secureUserProfile',
     JSON.stringify({
@@ -258,35 +238,32 @@ test('migrating codec upgrades old stored values and writes back the latest vers
         updatedAt: '2026-01-01T00:00:00.000Z',
         legacyCleanupStatus: 'notNeeded',
       },
-      encodedValue: JSON.stringify({
-        customerId: 'c-1',
-        accountId: 'a-1',
-      }),
+      encodedValue: JSON.stringify({ customerId: 'c-1', accountId: 'a-1' }),
     }),
     { requiresUserPresence: false },
   );
 
-  assert.deepEqual(await storage.get(property), {
+  // When
+  const value = await storage.get(property);
+  const item = await storage._inspect(property);
+
+  // Then
+  assert.deepEqual(value, {
     customerId: 'c-1',
     selectedAccountId: 'a-1',
     preferredAccountType: 'current',
   });
-
-  const item = await storage._inspect(property);
   assert.equal(item.metadata.version, 3);
   assert.match(item.encodedValue, /preferredAccountType/);
 });
 
 test('migrating codec rejects newer stored versions instead of downgrading', async () => {
+  // Given
   const backend = createMemorySecureStorageBackend();
   const storage = await createSecureStorage({
     backend,
-    authStateProvider: createAuthStateProvider({
-      hasBoundUser: true,
-      hasActiveSession: true,
-    }),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
   });
-
   const property = defineSecureStorageProperty({
     namespace: 'profile',
     name: 'secureUserProfile',
@@ -297,7 +274,6 @@ test('migrating codec rejects newer stored versions instead of downgrading', asy
       },
     }),
   });
-
   await backend.setItem(
     'secure-storage:user:profile:secureUserProfile',
     JSON.stringify({
@@ -319,8 +295,6 @@ test('migrating codec rejects newer stored versions instead of downgrading', asy
     { requiresUserPresence: false },
   );
 
-  await assert.rejects(
-    () => storage.get(property),
-    SecureStorageMigrationError,
-  );
+  // Then
+  await assert.rejects(() => storage.get(property), SecureStorageMigrationError);
 });

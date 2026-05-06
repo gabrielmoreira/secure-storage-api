@@ -1,3 +1,7 @@
+/**
+ * Small in-memory backend used by the prototype and tests.
+ * It deliberately matches the backend contract without adding provider semantics.
+ */
 export function createMemorySecureStorageBackend() {
   const items = new Map();
 

@@ -19,20 +19,24 @@ function createAuthStateProvider(state) {
 }
 
 test('property registry tracks registered properties and rejects duplicates', () => {
+  // Given
   const registry = createPropertyRegistry();
   const property = defineSecureStorageProperty({
     namespace: 'auth',
     name: 'refreshToken',
   });
 
+  // When
   registry.register(property);
 
+  // Then
   assert.deepEqual(registry.list(), [property]);
   assert.equal(registry.get('auth', 'refreshToken'), property);
   assert.throws(() => registry.register(property), /already registered/i);
 });
 
 test('secure diagnostics report only safe metadata and never stored values', async () => {
+  // Given
   const storage = await createSecureStorage({
     backend: createMemorySecureStorageBackend(),
     authStateProvider: createAuthStateProvider({
@@ -40,7 +44,6 @@ test('secure diagnostics report only safe metadata and never stored values', asy
       hasActiveSession: true,
     }),
   });
-
   const refreshToken = defineSecureStorageProperty({
     namespace: 'auth',
     name: 'refreshToken',
@@ -50,14 +53,15 @@ test('secure diagnostics report only safe metadata and never stored values', asy
     name: 'consentToken',
     access: 'userPresence',
   });
-
   await storage.set(refreshToken, 'secret-token');
 
+  // When
   const diagnostics = await createSecureDiagnostics({ storage }).inspectProperties([
     refreshToken,
     consent,
   ]);
 
+  // Then
   assert.deepEqual(diagnostics, [
     {
       namespace: 'auth',
@@ -82,13 +86,13 @@ test('secure diagnostics report only safe metadata and never stored values', asy
       updatedAt: null,
     },
   ]);
-
   assert.equal('encodedValue' in diagnostics[0], false);
   assert.equal('value' in diagnostics[0], false);
   assert.equal(JSON.stringify(diagnostics).includes('secret-token'), false);
 });
 
 test('createZodJsonCodec parses valid values through a schema-like contract', () => {
+  // Given
   const codec = createZodJsonCodec({
     parse(value) {
       if (!value || typeof value !== 'object' || typeof value.selectedAccountId !== 'string') {
@@ -99,6 +103,7 @@ test('createZodJsonCodec parses valid values through a schema-like contract', ()
     },
   });
 
+  // When
   const decoded = codec.decode('{"selectedAccountId":"acc-1"}', {
     propertyMetadata: {
       namespace: 'profile',
@@ -119,6 +124,7 @@ test('createZodJsonCodec parses valid values through a schema-like contract', ()
     codecs: {},
   });
 
+  // Then
   assert.deepEqual(decoded, {
     value: {
       selectedAccountId: 'acc-1',
@@ -127,12 +133,14 @@ test('createZodJsonCodec parses valid values through a schema-like contract', ()
 });
 
 test('createZodJsonCodec wraps schema validation failures without leaking values', () => {
+  // Given
   const codec = createZodJsonCodec({
     parse() {
       throw new Error('schema rejected value');
     },
   });
 
+  // Then
   assert.throws(
     () => codec.decode('{"selectedAccountId":"acc-1"}', {
       propertyMetadata: {
