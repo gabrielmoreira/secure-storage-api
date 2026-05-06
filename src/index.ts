@@ -166,6 +166,31 @@ export const builtInCodecs = Object.freeze({
   },
 });
 
+export function createZodJsonCodec(schemaLike) {
+  if (!schemaLike || typeof schemaLike.parse !== 'function') {
+    throw new TypeError('createZodJsonCodec requires an object with a parse function.');
+  }
+
+  return {
+    encode(value) {
+      return JSON.stringify(value);
+    },
+    decode(encodedValue, context) {
+      try {
+        const parsed = JSON.parse(encodedValue);
+        return {
+          value: schemaLike.parse(parsed),
+        };
+      } catch (cause) {
+        throw new SecureStorageCodecDecodeError('Schema-based JSON codec decode failed.', {
+          ...context.propertyMetadata,
+          operation: 'get',
+        }, { cause });
+      }
+    },
+  };
+}
+
 export function createMigratingJsonCodec({ migrate }) {
   if (typeof migrate !== 'function') {
     throw new TypeError('createMigratingJsonCodec requires a migrate function.');
@@ -234,6 +259,33 @@ export function createCodecRegistry({ builtInCodecs: codecs = builtInCodecs } = 
       }
 
       return codecRef;
+    },
+  };
+}
+
+export function createPropertyRegistry() {
+  const properties = new Map();
+
+  function toKey(namespace, name) {
+    return `${namespace}:${name}`;
+  }
+
+  return {
+    register(property) {
+      const key = toKey(property.namespace, property.name);
+
+      if (properties.has(key)) {
+        throw new Error(`Property ${key} is already registered.`);
+      }
+
+      properties.set(key, property);
+      return property;
+    },
+    get(namespace, name) {
+      return properties.get(toKey(namespace, name)) ?? null;
+    },
+    list() {
+      return [...properties.values()];
     },
   };
 }
@@ -637,6 +689,35 @@ async function runOneLegacyCleanup(backend, property, envelope, now) {
       }, { cause }),
     };
   }
+}
+
+export function createSecureDiagnostics({ storage }) {
+  if (!storage || typeof storage._inspect !== 'function') {
+    throw new TypeError('createSecureDiagnostics requires a storage instance with internal inspection support.');
+  }
+
+  return {
+    async inspectProperties(properties) {
+      const rows = [];
+
+      for (const property of properties) {
+        const envelope = await storage._inspect(property);
+        rows.push({
+          namespace: property.namespace,
+          name: property.name,
+          scope: property.scope,
+          access: property.access,
+          version: property.version,
+          exists: envelope !== null,
+          legacyCleanupStatus: envelope?.metadata.legacyCleanupStatus ?? null,
+          createdAt: envelope?.metadata.createdAt ?? null,
+          updatedAt: envelope?.metadata.updatedAt ?? null,
+        });
+      }
+
+      return rows;
+    },
+  };
 }
 
 export async function createSecureStorage(options) {
