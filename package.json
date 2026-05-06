@@ -6,6 +6,11 @@
   "description": "Backend-agnostic secure storage core prototype.",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/index.ts test/bootstrap.test.ts test/core.test.ts test/storage-engine.test.ts test/migration-cleanup.test.ts test/extensions.test.ts"
+    "check": "node --check src/index.ts test/bootstrap.test.ts test/core.test.ts test/storage-engine.test.ts test/migration-cleanup.test.ts test/extensions.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "typescript": "^5.9.3"
   }
 }

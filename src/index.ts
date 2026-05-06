@@ -47,6 +47,9 @@ function createErrorClass(name, code) {
 }
 
 export class SecureStorageError extends Error {
+  code;
+  metadata;
+
   constructor(message, code, metadata = {}, options = {}) {
     super(message, options);
     this.name = 'SecureStorageError';
@@ -168,7 +171,7 @@ export const builtInCodecs = Object.freeze({
 
 export function createZodJsonCodec(schemaLike) {
   if (!schemaLike || typeof schemaLike.parse !== 'function') {
-    throw new TypeError('createZodJsonCodec requires an object with a parse function.');
+    throw new TypeError('createZodJsonCodec expects a schema-like object with a parse() method.');
   }
 
   return {
@@ -348,13 +351,13 @@ export function createMemorySecureStorageBackend() {
   const items = new Map();
 
   return {
-    async getItem(key) {
+    async getItem(key, _options = undefined) {
       return items.get(key) ?? null;
     },
-    async setItem(key, value) {
+    async setItem(key, value, _options = undefined) {
       items.set(key, value);
     },
-    async removeItem(key) {
+    async removeItem(key, _options = undefined) {
       items.delete(key);
     },
     async getAllKeys() {
