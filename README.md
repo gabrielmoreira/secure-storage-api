@@ -248,6 +248,8 @@ npm run typecheck
 
 GitHub pull requests run the same test flow through a workflow that installs tools with `jdx/mise-action`.
 
+The repository also includes `test/samples.test.ts`, a sample-driven suite with end-to-end usage scenarios that can be used as executable reference examples.
+
 ## Current repository layout
 
 ```txt
@@ -264,6 +266,7 @@ test/storage-engine.test.ts
 test/migration-cleanup.test.ts
 test/extensions.test.ts
 test/composition-boundaries.test.ts
+test/samples.test.ts
 .github/workflows/pr.yml
 mise.toml
 ```
@@ -278,6 +281,7 @@ src/secure-storage-backend-adapter.ts backend-facing adapter and envelope parsin
 src/secure-storage.ts                real storage engine implementation
 src/support.ts                       shared internal helpers
 src/index.ts                         package public exports
+test/samples.test.ts                 sample-driven executable usage scenarios
 ```
 
 ## Notes on future extension points
