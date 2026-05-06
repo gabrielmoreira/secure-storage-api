@@ -19,11 +19,24 @@ test('public entry exposes built-in codec names needed by the spec', () => {
   ]);
 });
 
-test('createSecureStorage bootstrap placeholder throws a clear not-implemented error', async () => {
-  await assert.rejects(
-    Promise.resolve().then(() => secureStorageApi.createSecureStorage()),
-    /not implemented/i,
-  );
+test('createSecureStorage returns the core storage methods once the engine exists', async () => {
+  const storage = await secureStorageApi.createSecureStorage({
+    backend: secureStorageApi.createMemorySecureStorageBackend(),
+    authStateProvider: {
+      async getAuthState() {
+        return {
+          hasBoundUser: true,
+          hasActiveSession: true,
+        };
+      },
+    },
+  });
+
+  assert.equal(typeof storage.get, 'function');
+  assert.equal(typeof storage.set, 'function');
+  assert.equal(typeof storage.remove, 'function');
+  assert.equal(typeof storage.has, 'function');
+  assert.equal(typeof storage.clearUserStorage, 'function');
 });
 
 test('defineSecureStorageProperty applies spec defaults in bootstrap slice', () => {
