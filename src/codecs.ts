@@ -1,0 +1,131 @@
+import {
+  SecureStorageCodecDecodeError,
+  SecureStorageMigrationError,
+} from './api.ts';
+
+export const builtInCodecs = Object.freeze({
+  string: {
+    encode(value) {
+      return String(value);
+    },
+    decode(encodedValue) {
+      return { value: encodedValue };
+    },
+  },
+  number: {
+    encode(value) {
+      if (typeof value !== 'number' || Number.isNaN(value)) {
+        throw new TypeError('Number codec expects a valid number.');
+      }
+
+      return String(value);
+    },
+    decode(encodedValue) {
+      const value = Number(encodedValue);
+
+      if (Number.isNaN(value)) {
+        throw new TypeError('Number codec could not decode the stored value.');
+      }
+
+      return { value };
+    },
+  },
+  boolean: {
+    encode(value) {
+      if (typeof value !== 'boolean') {
+        throw new TypeError('Boolean codec expects a boolean.');
+      }
+
+      return value ? 'true' : 'false';
+    },
+    decode(encodedValue) {
+      if (encodedValue !== 'true' && encodedValue !== 'false') {
+        throw new TypeError('Boolean codec could not decode the stored value.');
+      }
+
+      return { value: encodedValue === 'true' };
+    },
+  },
+  json: {
+    encode(value) {
+      return JSON.stringify(value);
+    },
+    decode(encodedValue) {
+      return { value: JSON.parse(encodedValue) };
+    },
+  },
+});
+
+export function createZodJsonCodec(schemaLike) {
+  if (!schemaLike || typeof schemaLike.parse !== 'function') {
+    throw new TypeError('createZodJsonCodec expects a schema-like object with a parse() method.');
+  }
+
+  return {
+    encode(value) {
+      return JSON.stringify(value);
+    },
+    decode(encodedValue, context) {
+      try {
+        const parsed = JSON.parse(encodedValue);
+        return {
+          value: schemaLike.parse(parsed),
+        };
+      } catch (cause) {
+        throw new SecureStorageCodecDecodeError('Schema-based JSON codec decode failed.', {
+          ...context.propertyMetadata,
+          operation: 'get',
+        }, { cause });
+      }
+    },
+  };
+}
+
+export function createMigratingJsonCodec({ migrate }) {
+  if (typeof migrate !== 'function') {
+    throw new TypeError('createMigratingJsonCodec requires a migrate function.');
+  }
+
+  return {
+    encode(value) {
+      return JSON.stringify(value);
+    },
+    decode(encodedValue, context) {
+      const parsedValue = JSON.parse(encodedValue);
+      const fromVersion = context.itemMetadata.version;
+      const toVersion = context.propertyMetadata.version;
+
+      if (fromVersion > toVersion) {
+        throw new SecureStorageMigrationError('Stored version is newer than the property version.', {
+          ...context.propertyMetadata,
+          operation: 'get',
+        });
+      }
+
+      if (fromVersion === toVersion) {
+        return { value: parsedValue };
+      }
+
+      let migratedValue;
+      try {
+        migratedValue = migrate({
+          value: parsedValue,
+          fromVersion,
+          toVersion,
+          itemMetadata: context.itemMetadata,
+          propertyMetadata: context.propertyMetadata,
+        });
+      } catch (cause) {
+        throw new SecureStorageMigrationError('Value migration failed.', {
+          ...context.propertyMetadata,
+          operation: 'get',
+        }, { cause });
+      }
+
+      return {
+        value: migratedValue,
+        normalizedEncodedValue: JSON.stringify(migratedValue),
+      };
+    },
+  };
+}

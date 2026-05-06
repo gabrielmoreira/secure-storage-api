@@ -223,14 +223,30 @@ GitHub pull requests run the same test flow through a workflow that installs too
 ## Current repository layout
 
 ```txt
+src/api.ts
+src/codecs.ts
+src/memory-backend.ts
+src/secure-storage.ts
+src/support.ts
 src/index.ts
- test/bootstrap.test.ts
- test/core.test.ts
- test/storage-engine.test.ts
- test/migration-cleanup.test.ts
- test/extensions.test.ts
- .github/workflows/pr.yml
- mise.toml
+test/bootstrap.test.ts
+test/core.test.ts
+test/storage-engine.test.ts
+test/migration-cleanup.test.ts
+test/extensions.test.ts
+.github/workflows/pr.yml
+mise.toml
+```
+
+## Source layout
+
+```txt
+src/api.ts             public api contracts, property definition, errors, registries
+src/codecs.ts          built-in codecs and codec helpers
+src/memory-backend.ts  in-memory backend for the prototype
+src/secure-storage.ts  real storage engine implementation
+src/support.ts         shared internal helpers
+src/index.ts           package public exports
 ```
 
 ## Notes on future extension points
