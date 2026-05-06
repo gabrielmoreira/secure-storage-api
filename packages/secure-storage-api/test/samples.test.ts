@@ -152,6 +152,13 @@ test('sample: versioned profile data migrates through a codec', async () => {
             preferredAccountType: 'current',
           };
         }
+        if (fromVersion === 2) {
+          return {
+            customerId: value.customerId,
+            selectedAccountId: value.selectedAccountId,
+            preferredAccountType: value.preferredAccountType ?? 'current',
+          };
+        }
         return value;
       },
     }),
@@ -188,6 +195,76 @@ test('sample: versioned profile data migrates through a codec', async () => {
   assert.deepEqual(value, {
     customerId: 'c-1',
     selectedAccountId: 'a-1',
+    preferredAccountType: 'current',
+  });
+  assert.equal(item.metadata.version, 3);
+});
+
+test('sample: version 2 profile data also migrates to the final versioned shape', async () => {
+  // Given
+  const backend = createMemorySecureStorageBackend();
+  const secureUserProfile = defineSecureStorageProperty({
+    namespace: 'profile',
+    name: 'secureUserProfile',
+    version: 3,
+    codec: createMigratingJsonCodec({
+      migrate({ value, fromVersion, toVersion }) {
+        if (toVersion !== 3) {
+          throw new Error('unsupported target');
+        }
+        if (fromVersion === 1) {
+          return {
+            customerId: value.customerId,
+            selectedAccountId: value.accountId,
+            preferredAccountType: 'current',
+          };
+        }
+        if (fromVersion === 2) {
+          return {
+            customerId: value.customerId,
+            selectedAccountId: value.selectedAccountId,
+            preferredAccountType: value.preferredAccountType ?? 'current',
+          };
+        }
+        return value;
+      },
+    }),
+  });
+  await backend.setItem(
+    'secure-storage:user:profile:secureUserProfile',
+    JSON.stringify({
+      metadata: {
+        namespace: 'profile',
+        name: 'secureUserProfile',
+        scope: 'user',
+        version: 2,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        legacyCleanupStatus: 'notNeeded',
+      },
+      encodedValue: JSON.stringify({
+        customerId: 'c-1',
+        selectedAccountId: 'a-2',
+      }),
+    }),
+    { requiresUserPresence: false },
+  );
+  const secureStorage = await createSecureStorage({
+    backend,
+    authStateProvider: createAuthStateProvider({
+      hasBoundUser: true,
+      hasActiveSession: true,
+    }),
+  });
+
+  // When
+  const value = await secureStorage.get(secureUserProfile);
+  const item = await secureStorage._inspect(secureUserProfile);
+
+  // Then
+  assert.deepEqual(value, {
+    customerId: 'c-1',
+    selectedAccountId: 'a-2',
     preferredAccountType: 'current',
   });
   assert.equal(item.metadata.version, 3);

@@ -136,6 +136,8 @@ const profileCodec = createMigratingJsonCodec({
     if (toVersion !== 3) {
       throw new Error('Unsupported target version');
     }
+
+    // The codec should know how to reach the final shape from every supported older version.
     if (fromVersion === 1) {
       return {
         customerId: value.customerId,
@@ -143,9 +145,19 @@ const profileCodec = createMigratingJsonCodec({
         preferredAccountType: 'current',
       };
     }
+
+    if (fromVersion === 2) {
+      return {
+        customerId: value.customerId,
+        selectedAccountId: value.selectedAccountId,
+        preferredAccountType: value.preferredAccountType ?? 'current',
+      };
+    }
+
     if (fromVersion === 3) {
       return value;
     }
+
     throw new Error(`Unsupported version ${fromVersion}`);
   },
 });
@@ -157,6 +169,8 @@ const secureUserProfile = defineSecureStorageProperty({
   codec: profileCodec,
 });
 ```
+
+In practice, the property version expresses the final target shape. The codec is responsible for upgrading any supported older stored version to that final typed shape.
 
 ## Legacy fallback and cleanup
 
