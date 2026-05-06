@@ -87,6 +87,7 @@ function createSecureStorageRuntime(options) {
   const {
     backend,
     authStateProvider,
+    registry = null,
     featureFlags = {},
     now = () => new Date(),
   } = options;
@@ -95,6 +96,7 @@ function createSecureStorageRuntime(options) {
     throw new TypeError('authStateProvider must implement getAuthState.');
   }
 
+  const assertRegisteredProperty = makeRegisteredPropertyAssertion(registry);
   const codecRegistry = createCodecRegistry({ builtInCodecs });
   const storageBackend = makeSecureStorageBackendAdapter({ backend });
   const cleanupEnabled = Boolean(featureFlags.legacyCleanupEnabled);
@@ -105,6 +107,7 @@ function createSecureStorageRuntime(options) {
     },
 
     async readPropertyValue(property) {
+      assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'get');
 
       // The read order is the core policy: new storage -> legacy fallback -> default value.
@@ -150,6 +153,7 @@ function createSecureStorageRuntime(options) {
     },
 
     async writePropertyValue(property, value) {
+      assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'set');
 
       const existingEnvelope = await storageBackend.readEnvelope(property, 'set');
@@ -165,11 +169,13 @@ function createSecureStorageRuntime(options) {
     },
 
     async removePropertyValue(property) {
+      assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'remove');
       await storageBackend.removeProperty(property, 'remove');
     },
 
     async hasStoredValue(property) {
+      assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'has');
       const envelope = await storageBackend.readEnvelope(property, 'has');
       return envelope !== null;
@@ -202,6 +208,7 @@ function createSecureStorageRuntime(options) {
       }
 
       for (const property of properties) {
+        assertRegisteredProperty(property);
         const envelope = await storageBackend.readEnvelope(property, 'runLegacyCleanup');
 
         if (!envelope || envelope.metadata.legacyCleanupStatus !== 'pending') {
@@ -231,6 +238,25 @@ function createSecureStorageRuntime(options) {
   };
 }
 
+function makeRegisteredPropertyAssertion(registry) {
+  if (!registry) {
+    return function assertRegisteredProperty() {};
+  }
+
+  if (typeof registry.get !== 'function') {
+    throw new TypeError('registry must implement get(namespace, name).');
+  }
+
+  return function assertRegisteredProperty(property) {
+    const registeredProperty = registry.get(property.namespace, property.name);
+
+    if (!registeredProperty) {
+      throw new TypeError(
+        `Property ${property.namespace}.${property.name} must be registered before it can be used by this secure storage instance.`,
+      );
+    }
+  };
+}
 async function readStoredValue({
   property,
   storedEnvelope,

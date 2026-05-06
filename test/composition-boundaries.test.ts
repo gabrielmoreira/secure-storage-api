@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   createMemorySecureStorageBackend,
+  createPropertyRegistry,
   createSecureStorage,
   defineSecureStorageProperty,
 } from '../src/index.ts';
@@ -60,4 +61,28 @@ test('storage keeps backend-specific key handling behind the adapter boundary', 
   assert.equal(inspected.metadata.namespace, 'auth');
   assert.equal(inspected.metadata.name, 'refreshToken');
   assert.equal(inspected.encodedValue, 'token-123');
+});
+
+test('storage can enforce that only registered properties are used when a registry is provided', async () => {
+  // Given
+  const registry = createPropertyRegistry();
+  const registered = defineSecureStorageProperty({ namespace: 'auth', name: 'refreshToken' });
+  const unregistered = defineSecureStorageProperty({ namespace: 'auth', name: 'accessToken' });
+  registry.register(registered);
+  const storage = await createSecureStorage({
+    backend: createMemorySecureStorageBackend(),
+    authStateProvider: createAuthStateProvider({
+      hasBoundUser: true,
+      hasActiveSession: true,
+    }),
+    registry,
+  });
+
+  // When
+  await storage.set(registered, 'token-123');
+
+  // Then
+  assert.equal(await storage.get(registered), 'token-123');
+  await assert.rejects(() => storage.get(unregistered), /registered/i);
+  await assert.rejects(() => storage.set(unregistered, 'token-456'), /registered/i);
 });

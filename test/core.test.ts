@@ -6,8 +6,9 @@ import {
   SecureStorageAccessError,
   SecureStorageCodecDecodeError,
   builtInCodecs,
-  defineSecureStorageProperty,
   createCodecRegistry,
+  createPropertyRegistry,
+  defineSecureStorageProperty,
 } from '../src/index.ts';
 
 test('defineSecureStorageProperty preserves explicit values and defaults the rest', () => {
@@ -134,4 +135,17 @@ test('typed secure storage errors share a stable base class', () => {
   assert.ok(error instanceof Error);
   assert.ok(error instanceof SecureStorageError);
   assert.equal(error.code, 'access_error');
+});
+
+test('property registry rejects duplicate namespace plus name combinations', () => {
+  // Given
+  const registry = createPropertyRegistry();
+  const first = defineSecureStorageProperty({ namespace: 'auth', name: 'refreshToken' });
+  const second = defineSecureStorageProperty({ namespace: 'auth', name: 'refreshToken' });
+
+  // When
+  registry.register(first);
+
+  // Then
+  assert.throws(() => registry.register(second), /already registered/i);
 });
