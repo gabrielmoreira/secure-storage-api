@@ -1,0 +1,11 @@
+{
+  "name": "secure-storage-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend-agnostic secure storage core prototype.",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/index.ts test/bootstrap.test.ts"
+  }
+}

@@ -1,0 +1,16 @@
+name: pull-request
+
+on:
+  pull_request:
+  push:
+    branches:
+      - v0/node-phase0
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v4
+      - name: Run tests
+        run: node --test
