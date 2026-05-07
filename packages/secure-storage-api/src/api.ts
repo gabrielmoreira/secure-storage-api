@@ -82,29 +82,76 @@ export type SecureStorageCodecValue<TCodec> =
   TCodec extends SecureStorageCodec<infer TValue> ? TValue :
   never;
 
-export interface SecureStorageProperty<TValue = string, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue> = 'string'> {
+export type SecureStorageDefaultValueInput<TResult> =
+  TResult | (() => TResult | Promise<TResult>);
+
+export type SecureStorageLegacyFallbackInput<TResult> =
+  () => TResult | Promise<TResult>;
+
+type AwaitedValue<TValue> =
+  TValue extends Promise<infer TResult> ? AwaitedValue<TResult> : TValue;
+
+export interface SecureStorageProperty<
+  TValue = string,
+  TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue> = 'string',
+  TDefaultValue extends SecureStorageDefaultValueInput<TValue> | undefined = undefined,
+  TLegacyFallback extends SecureStorageLegacyFallbackInput<TValue | null> | undefined = undefined,
+> {
   namespace: string;
   name: string;
   scope: SecureStorageScope;
   access: SecureStorageAccessMode;
   version: number;
   codec: TCodec;
-  defaultValue?: TValue | (() => TValue | Promise<TValue>);
-  legacyFallback?: () => TValue | null | Promise<TValue | null>;
+  defaultValue?: TDefaultValue;
+  legacyFallback?: TLegacyFallback;
   legacyCleanup?: () => void | Promise<void>;
 }
 
-type SecureStoragePropertyInputBase<TValue, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue>> = {
+type SecureStoragePropertyInputBase<
+  TValue,
+  TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue>,
+  TDefaultValue extends SecureStorageDefaultValueInput<TValue> | undefined = undefined,
+  TLegacyFallback extends SecureStorageLegacyFallbackInput<TValue | null> | undefined = undefined,
+> = {
   namespace: string;
   name: string;
   scope?: SecureStorageScope;
   access?: SecureStorageAccessMode;
   version?: number;
   codec?: TCodec;
-  defaultValue?: TValue | (() => TValue | Promise<TValue>);
-  legacyFallback?: () => TValue | null | Promise<TValue | null>;
+  defaultValue?: TDefaultValue;
+  legacyFallback?: TLegacyFallback;
   legacyCleanup?: () => void | Promise<void>;
 };
+
+export type SecureStoragePropertyValue<TProperty extends SecureStorageProperty<any, any, any, any>> =
+  TProperty extends SecureStorageProperty<infer TValue, any, any, any> ? TValue : never;
+
+type SecureStoragePropertyDefaultValue<TProperty extends SecureStorageProperty<any, any, any, any>> =
+  TProperty extends SecureStorageProperty<any, any, infer TDefaultValue, any> ? TDefaultValue : never;
+
+type SecureStoragePropertyLegacyFallback<TProperty extends SecureStorageProperty<any, any, any, any>> =
+  TProperty extends SecureStorageProperty<any, any, any, infer TLegacyFallback> ? TLegacyFallback : never;
+
+type SecureStorageResolvedDefaultValue<TProperty extends SecureStorageProperty<any, any, any, any>> =
+  [SecureStoragePropertyDefaultValue<TProperty>] extends [undefined] ? never :
+  SecureStoragePropertyDefaultValue<TProperty> extends (...args: any[]) => infer TResult ? AwaitedValue<TResult> :
+  SecureStoragePropertyDefaultValue<TProperty>;
+
+type SecureStorageResolvedLegacyFallbackValue<TProperty extends SecureStorageProperty<any, any, any, any>> =
+  SecureStoragePropertyLegacyFallback<TProperty> extends (...args: any[]) => infer TResult ? AwaitedValue<TResult> :
+  never;
+
+type SecureStorageGuaranteesValue<TValue> =
+  [TValue] extends [never] ? false :
+  null extends TValue ? false :
+  true;
+
+export type SecureStorageGetResult<TProperty extends SecureStorageProperty<any, any, any, any>> =
+  SecureStorageGuaranteesValue<SecureStorageResolvedLegacyFallbackValue<TProperty>> extends true ? SecureStoragePropertyValue<TProperty> :
+  SecureStorageGuaranteesValue<SecureStorageResolvedDefaultValue<TProperty>> extends true ? SecureStoragePropertyValue<TProperty> :
+  SecureStoragePropertyValue<TProperty> | null;
 
 export interface SecureStorageCleanupSummary {
   checked: number;
@@ -133,17 +180,17 @@ export interface SecureStorageDiagnosticsEntry {
 }
 
 export interface SecureStorage {
-  get<TValue>(property: SecureStorageProperty<TValue, any>): Promise<TValue | null>;
-  set<TValue>(property: SecureStorageProperty<TValue, any>, value: TValue): Promise<void>;
-  remove<TValue>(property: SecureStorageProperty<TValue, any>): Promise<void>;
-  has<TValue>(property: SecureStorageProperty<TValue, any>): Promise<boolean>;
+  get<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty): Promise<SecureStorageGetResult<TProperty>>;
+  set<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty, value: SecureStoragePropertyValue<TProperty>): Promise<void>;
+  remove<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty): Promise<void>;
+  has<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty): Promise<boolean>;
   clearUserStorage(): Promise<void>;
-  runLegacyCleanup(properties: ReadonlyArray<SecureStorageProperty<any, any>>): Promise<SecureStorageCleanupSummary>;
-  _inspect<TValue>(property: SecureStorageProperty<TValue, any>): Promise<SecureStorageStoredEnvelope<TValue> | null>;
+  runLegacyCleanup(properties: ReadonlyArray<SecureStorageProperty<any, any, any, any>>): Promise<SecureStorageCleanupSummary>;
+  _inspect<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty): Promise<SecureStorageStoredEnvelope<SecureStoragePropertyValue<TProperty>> | null>;
 }
 
 export interface SecureStorageDiagnostics {
-  inspectProperties(properties: ReadonlyArray<SecureStorageProperty<any, any>>): Promise<SecureStorageDiagnosticsEntry[]>;
+  inspectProperties(properties: ReadonlyArray<SecureStorageProperty<any, any, any, any>>): Promise<SecureStorageDiagnosticsEntry[]>;
 }
 
 export interface CreateSecureStorageOptions {
@@ -155,18 +202,36 @@ export interface CreateSecureStorageOptions {
 }
 
 export interface SecureStoragePropertyRegistry {
-  register<TValue, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue>>(
-    property: SecureStorageProperty<TValue, TCodec>,
-  ): SecureStorageProperty<TValue, TCodec>;
-  defineProperty(input: SecureStoragePropertyInputBase<string, 'string'> & { codec?: undefined | 'string' }): SecureStorageProperty<string, 'string'>;
-  defineProperty(input: SecureStoragePropertyInputBase<number, 'number'> & { codec: 'number' }): SecureStorageProperty<number, 'number'>;
-  defineProperty(input: SecureStoragePropertyInputBase<boolean, 'boolean'> & { codec: 'boolean' }): SecureStorageProperty<boolean, 'boolean'>;
-  defineProperty<TValue>(input: SecureStoragePropertyInputBase<TValue, 'json'> & { codec: 'json' }): SecureStorageProperty<TValue, 'json'>;
-  defineProperty<TValue, TCodec extends SecureStorageCodec<TValue>>(
-    input: SecureStoragePropertyInputBase<TValue, TCodec> & { codec: TCodec },
-  ): SecureStorageProperty<TValue, TCodec>;
-  get(namespace: string, name: string): SecureStorageProperty<any, any> | null;
-  list(): Array<SecureStorageProperty<any, any>>;
+  register<TProperty extends SecureStorageProperty<any, any, any, any>>(
+    property: TProperty,
+  ): TProperty;
+  defineProperty<
+    TDefaultValue extends SecureStorageDefaultValueInput<string> | undefined = undefined,
+    TLegacyFallback extends SecureStorageLegacyFallbackInput<string | null> | undefined = undefined,
+  >(input: SecureStoragePropertyInputBase<string, 'string', TDefaultValue, TLegacyFallback> & { codec?: undefined | 'string' }): SecureStorageProperty<string, 'string', TDefaultValue, TLegacyFallback>;
+  defineProperty<
+    TDefaultValue extends SecureStorageDefaultValueInput<number> | undefined = undefined,
+    TLegacyFallback extends SecureStorageLegacyFallbackInput<number | null> | undefined = undefined,
+  >(input: SecureStoragePropertyInputBase<number, 'number', TDefaultValue, TLegacyFallback> & { codec: 'number' }): SecureStorageProperty<number, 'number', TDefaultValue, TLegacyFallback>;
+  defineProperty<
+    TDefaultValue extends SecureStorageDefaultValueInput<boolean> | undefined = undefined,
+    TLegacyFallback extends SecureStorageLegacyFallbackInput<boolean | null> | undefined = undefined,
+  >(input: SecureStoragePropertyInputBase<boolean, 'boolean', TDefaultValue, TLegacyFallback> & { codec: 'boolean' }): SecureStorageProperty<boolean, 'boolean', TDefaultValue, TLegacyFallback>;
+  defineProperty<
+    TValue,
+    TDefaultValue extends SecureStorageDefaultValueInput<TValue> | undefined = undefined,
+    TLegacyFallback extends SecureStorageLegacyFallbackInput<TValue | null> | undefined = undefined,
+  >(input: SecureStoragePropertyInputBase<TValue, 'json', TDefaultValue, TLegacyFallback> & { codec: 'json' }): SecureStorageProperty<TValue, 'json', TDefaultValue, TLegacyFallback>;
+  defineProperty<
+    TValue,
+    TCodec extends SecureStorageCodec<TValue>,
+    TDefaultValue extends SecureStorageDefaultValueInput<TValue> | undefined = undefined,
+    TLegacyFallback extends SecureStorageLegacyFallbackInput<TValue | null> | undefined = undefined,
+  >(
+    input: SecureStoragePropertyInputBase<TValue, TCodec, TDefaultValue, TLegacyFallback> & { codec: TCodec },
+  ): SecureStorageProperty<TValue, TCodec, TDefaultValue, TLegacyFallback>;
+  get(namespace: string, name: string): SecureStorageProperty<any, any, any, any> | null;
+  list(): Array<SecureStorageProperty<any, any, any, any>>;
 }
 
 function createErrorClass(name, code) {
@@ -242,9 +307,9 @@ export function createPropertyRegistry(): SecureStoragePropertyRegistry {
     return `${namespace}:${name}`;
   }
 
-  function register<TValue, TCodec extends SecureStorageCodecName | SecureStorageCodec<TValue>>(
-    property: SecureStorageProperty<TValue, TCodec>,
-  ): SecureStorageProperty<TValue, TCodec> {
+  function register<TProperty extends SecureStorageProperty<any, any, any, any>>(
+    property: TProperty,
+  ): TProperty {
     const key = toKey(property.namespace, property.name);
     if (properties.has(key)) {
       throw new Error(`Property ${key} is already registered.`);
@@ -273,22 +338,40 @@ export function createPropertyRegistry(): SecureStoragePropertyRegistry {
  * Public property definition helper.
  * This is the semantic center for property defaults, so callers stay terse at use sites.
  */
-export function defineSecureStorageProperty(
-  input: SecureStoragePropertyInputBase<string, 'string'> & { codec?: undefined | 'string' },
-): SecureStorageProperty<string, 'string'>;
-export function defineSecureStorageProperty(
-  input: SecureStoragePropertyInputBase<number, 'number'> & { codec: 'number' },
-): SecureStorageProperty<number, 'number'>;
-export function defineSecureStorageProperty(
-  input: SecureStoragePropertyInputBase<boolean, 'boolean'> & { codec: 'boolean' },
-): SecureStorageProperty<boolean, 'boolean'>;
-export function defineSecureStorageProperty<TValue>(
-  input: SecureStoragePropertyInputBase<TValue, 'json'> & { codec: 'json' },
-): SecureStorageProperty<TValue, 'json'>;
-export function defineSecureStorageProperty<TValue, TCodec extends SecureStorageCodec<TValue>>(
-  input: SecureStoragePropertyInputBase<TValue, TCodec> & { codec: TCodec },
-): SecureStorageProperty<TValue, TCodec>;
-export function defineSecureStorageProperty(input: any): SecureStorageProperty<any, any> {
+export function defineSecureStorageProperty<
+  TDefaultValue extends SecureStorageDefaultValueInput<string> | undefined = undefined,
+  TLegacyFallback extends SecureStorageLegacyFallbackInput<string | null> | undefined = undefined,
+>(
+  input: SecureStoragePropertyInputBase<string, 'string', TDefaultValue, TLegacyFallback> & { codec?: undefined | 'string' },
+): SecureStorageProperty<string, 'string', TDefaultValue, TLegacyFallback>;
+export function defineSecureStorageProperty<
+  TDefaultValue extends SecureStorageDefaultValueInput<number> | undefined = undefined,
+  TLegacyFallback extends SecureStorageLegacyFallbackInput<number | null> | undefined = undefined,
+>(
+  input: SecureStoragePropertyInputBase<number, 'number', TDefaultValue, TLegacyFallback> & { codec: 'number' },
+): SecureStorageProperty<number, 'number', TDefaultValue, TLegacyFallback>;
+export function defineSecureStorageProperty<
+  TDefaultValue extends SecureStorageDefaultValueInput<boolean> | undefined = undefined,
+  TLegacyFallback extends SecureStorageLegacyFallbackInput<boolean | null> | undefined = undefined,
+>(
+  input: SecureStoragePropertyInputBase<boolean, 'boolean', TDefaultValue, TLegacyFallback> & { codec: 'boolean' },
+): SecureStorageProperty<boolean, 'boolean', TDefaultValue, TLegacyFallback>;
+export function defineSecureStorageProperty<
+  TValue,
+  TDefaultValue extends SecureStorageDefaultValueInput<TValue> | undefined = undefined,
+  TLegacyFallback extends SecureStorageLegacyFallbackInput<TValue | null> | undefined = undefined,
+>(
+  input: SecureStoragePropertyInputBase<TValue, 'json', TDefaultValue, TLegacyFallback> & { codec: 'json' },
+): SecureStorageProperty<TValue, 'json', TDefaultValue, TLegacyFallback>;
+export function defineSecureStorageProperty<
+  TValue,
+  TCodec extends SecureStorageCodec<TValue>,
+  TDefaultValue extends SecureStorageDefaultValueInput<TValue> | undefined = undefined,
+  TLegacyFallback extends SecureStorageLegacyFallbackInput<TValue | null> | undefined = undefined,
+>(
+  input: SecureStoragePropertyInputBase<TValue, TCodec, TDefaultValue, TLegacyFallback> & { codec: TCodec },
+): SecureStorageProperty<TValue, TCodec, TDefaultValue, TLegacyFallback>;
+export function defineSecureStorageProperty(input: any): SecureStorageProperty<any, any, any, any> {
   if (!input || typeof input !== 'object') {
     throw new TypeError('Property input must be an object.');
   }

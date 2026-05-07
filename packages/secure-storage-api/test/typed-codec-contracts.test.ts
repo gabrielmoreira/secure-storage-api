@@ -16,6 +16,11 @@ function createAuthStateProvider(state) {
   };
 }
 
+function expectNumber(_value: number) {}
+function expectNumberOrNull(_value: number | null) {}
+function expectBoolean(_value: boolean) {}
+function expectBooleanOrNull(_value: boolean | null) {}
+
 test('typed contract: number codec property returns number from get and accepts number in set', async () => {
   // Given
   const retryCount = defineSecureStorageProperty({
@@ -35,6 +40,92 @@ test('typed contract: number codec property returns number from get and accepts 
   // Then
   assert.equal(typeof value, 'number');
   assert.equal(value, 3);
+});
+
+test('typed contract: get stays nullable when the property has no default or legacy guarantee', async () => {
+  // Given
+  const retryCount = defineSecureStorageProperty({
+    namespace: 'sync',
+    name: 'nullableRetryCount',
+    codec: 'number',
+  });
+  const secureStorage = await createSecureStorage({
+    backend: createMemorySecureStorageBackend(),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
+  });
+
+  // When
+  const value = await secureStorage.get(retryCount);
+
+  // Then
+  expectNumberOrNull(value);
+  assert.equal(value, null);
+});
+
+test('typed contract: non-null defaultValue makes get return the codec value type without null', async () => {
+  // Given
+  const retryCount = defineSecureStorageProperty({
+    namespace: 'sync',
+    name: 'defaultedRetryCount',
+    codec: 'number',
+    defaultValue: 0,
+  });
+  const secureStorage = await createSecureStorage({
+    backend: createMemorySecureStorageBackend(),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
+  });
+
+  // When
+  const value = await secureStorage.get(retryCount);
+
+  // Then
+  expectNumber(value);
+  assert.equal(value, 0);
+});
+
+test('typed contract: non-null legacyFallback makes get return the codec value type without null', async () => {
+  // Given
+  const hasAcceptedTerms = defineSecureStorageProperty({
+    namespace: 'onboarding',
+    name: 'legacyAcceptedTerms',
+    codec: 'boolean',
+    legacyFallback: async () => true,
+    legacyCleanup: async () => {},
+  });
+  const secureStorage = await createSecureStorage({
+    backend: createMemorySecureStorageBackend(),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
+  });
+
+  // When
+  const value = await secureStorage.get(hasAcceptedTerms);
+
+  // Then
+  expectBoolean(value);
+  assert.equal(value, true);
+});
+
+test('typed contract: nullable legacy plus non-null default still makes get non-null', async () => {
+  // Given
+  const hasAcceptedTerms = defineSecureStorageProperty({
+    namespace: 'onboarding',
+    name: 'resolvedAcceptedTerms',
+    codec: 'boolean',
+    legacyFallback: async () => null,
+    legacyCleanup: async () => {},
+    defaultValue: false,
+  });
+  const secureStorage = await createSecureStorage({
+    backend: createMemorySecureStorageBackend(),
+    authStateProvider: createAuthStateProvider({ hasBoundUser: true, hasActiveSession: true }),
+  });
+
+  // When
+  const value = await secureStorage.get(hasAcceptedTerms);
+
+  // Then
+  expectBoolean(value);
+  assert.equal(value, false);
 });
 
 test('typed contract: boolean codec property returns boolean from get and accepts boolean in set', async () => {

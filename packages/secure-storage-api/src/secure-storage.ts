@@ -3,7 +3,9 @@ import type {
   SecureStorage,
   SecureStorageCodecContext,
   SecureStorageDiagnostics,
+  SecureStorageGetResult,
   SecureStorageProperty,
+  SecureStoragePropertyValue,
   SecureStorageStoredEnvelope,
 } from './api.ts';
 import {
@@ -110,11 +112,11 @@ function createSecureStorageRuntime(options: CreateSecureStorageOptions) {
   const cleanupEnabled = Boolean(featureFlags.legacyCleanupEnabled);
 
   return {
-    inspectStoredEnvelope<TValue>(property: SecureStorageProperty<TValue, any>): Promise<SecureStorageStoredEnvelope<TValue> | null> {
-      return storageBackend.readEnvelope(property, 'inspect') as Promise<SecureStorageStoredEnvelope<TValue> | null>;
+    inspectStoredEnvelope<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty): Promise<SecureStorageStoredEnvelope<SecureStoragePropertyValue<TProperty>> | null> {
+      return storageBackend.readEnvelope(property, 'inspect') as Promise<SecureStorageStoredEnvelope<SecureStoragePropertyValue<TProperty>> | null>;
     },
 
-    async readPropertyValue<TValue>(property: SecureStorageProperty<TValue, any>): Promise<TValue | null> {
+    async readPropertyValue<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty): Promise<SecureStorageGetResult<TProperty>> {
       assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'get');
 
@@ -127,7 +129,7 @@ function createSecureStorageRuntime(options: CreateSecureStorageOptions) {
           codecRegistry,
           now,
           cleanupEnabled,
-        });
+        }) as Promise<SecureStorageGetResult<TProperty>>;
       }
 
       const migratedLegacyValue = await readLegacyFallbackValue(property);
@@ -139,12 +141,12 @@ function createSecureStorageRuntime(options: CreateSecureStorageOptions) {
           codecRegistry,
           now,
           cleanupEnabled,
-        });
+        }) as Promise<SecureStorageGetResult<TProperty>>;
       }
 
       const defaultValue = await readDefaultValue(property);
       if (!defaultValue.hasValue) {
-        return null;
+        return null as SecureStorageGetResult<TProperty>;
       }
 
       await persistPropertyValue({
@@ -156,10 +158,10 @@ function createSecureStorageRuntime(options: CreateSecureStorageOptions) {
         operation: 'get',
       });
 
-      return defaultValue.value;
+      return defaultValue.value as SecureStorageGetResult<TProperty>;
     },
 
-    async writePropertyValue<TValue>(property: SecureStorageProperty<TValue, any>, value: TValue) {
+    async writePropertyValue<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty, value: SecureStoragePropertyValue<TProperty>) {
       assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'set');
 
@@ -175,13 +177,13 @@ function createSecureStorageRuntime(options: CreateSecureStorageOptions) {
       });
     },
 
-    async removePropertyValue<TValue>(property: SecureStorageProperty<TValue, any>) {
+    async removePropertyValue<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty) {
       assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'remove');
       await storageBackend.removeProperty(property, 'remove');
     },
 
-    async hasStoredValue<TValue>(property: SecureStorageProperty<TValue, any>) {
+    async hasStoredValue<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty) {
       assertRegisteredProperty(property);
       await assertAccessAllowed(authStateProvider, property, 'has');
       const envelope = await storageBackend.readEnvelope(property, 'has');
@@ -195,7 +197,7 @@ function createSecureStorageRuntime(options: CreateSecureStorageOptions) {
       await Promise.all(keys.filter((key) => key.startsWith(userPrefix)).map((key) => storageBackend.removeKey(key)));
     },
 
-    async runPendingLegacyCleanup(properties: ReadonlyArray<SecureStorageProperty<any, any>>) {
+    async runPendingLegacyCleanup(properties: ReadonlyArray<SecureStorageProperty<any, any, any, any>>) {
       const summary = {
         checked: properties.length,
         pending: 0,
@@ -249,7 +251,7 @@ function makeRegisteredPropertyAssertion(registry: CreateSecureStorageOptions['r
     throw new TypeError('registry must implement get(namespace, name).');
   }
 
-  return function assertRegisteredProperty(property: SecureStorageProperty<any, any>) {
+  return function assertRegisteredProperty(property: SecureStorageProperty<any, any, any, any>) {
     const registeredProperty = registry.get(property.namespace, property.name);
 
     if (!registeredProperty) {
@@ -268,7 +270,7 @@ async function readStoredValue<TValue>({
   now,
   cleanupEnabled,
 }: {
-  property: SecureStorageProperty<TValue, any>;
+  property: SecureStorageProperty<TValue, any, any, any>;
   storedEnvelope: SecureStorageStoredEnvelope<TValue>;
   storageBackend: any;
   codecRegistry: ReturnType<typeof createCodecRegistry>;
@@ -304,7 +306,7 @@ async function migrateLegacyValueIntoStorage<TValue>({
   now,
   cleanupEnabled,
 }: {
-  property: SecureStorageProperty<TValue, any>;
+  property: SecureStorageProperty<TValue, any, any, any>;
   value: TValue;
   storageBackend: any;
   codecRegistry: ReturnType<typeof createCodecRegistry>;
@@ -340,7 +342,7 @@ async function normalizeDecodedValueIfNeeded<TValue>({
   storageBackend,
   now,
 }: {
-  property: SecureStorageProperty<TValue, any>;
+  property: SecureStorageProperty<TValue, any, any, any>;
   storedEnvelope: SecureStorageStoredEnvelope<TValue>;
   decoded: { value: TValue; normalizedEncodedValue?: string };
   storageBackend: any;
@@ -372,7 +374,7 @@ async function runInlineLegacyCleanupIfEnabled<TValue>({
   cleanupEnabled,
   operation,
 }: {
-  property: SecureStorageProperty<TValue, any>;
+  property: SecureStorageProperty<TValue, any, any, any>;
   envelope: SecureStorageStoredEnvelope<TValue>;
   storageBackend: any;
   now: () => Date;
@@ -423,7 +425,7 @@ async function runPendingCleanupOnce<TValue>({
   storageBackend,
   now,
 }: {
-  property: SecureStorageProperty<TValue, any>;
+  property: SecureStorageProperty<TValue, any, any, any>;
   envelope: SecureStorageStoredEnvelope<TValue>;
   storageBackend: any;
   now: () => Date;
@@ -480,7 +482,7 @@ async function updateLegacyCleanupStatus<TValue>({
   status,
   operation,
 }: {
-  property: SecureStorageProperty<TValue, any>;
+  property: SecureStorageProperty<TValue, any, any, any>;
   envelope: SecureStorageStoredEnvelope<TValue>;
   storageBackend: any;
   now: () => Date;
@@ -506,7 +508,7 @@ async function persistPropertyValue<TValue>({
   existingEnvelope = null,
   cleanupStatus = existingEnvelope?.metadata?.legacyCleanupStatus ?? 'notNeeded',
 }: {
-  property: SecureStorageProperty<TValue, any>;
+  property: SecureStorageProperty<TValue, any, any, any>;
   value: TValue;
   storageBackend: any;
   codecRegistry: ReturnType<typeof createCodecRegistry>;
@@ -526,9 +528,9 @@ async function persistPropertyValue<TValue>({
   return envelope;
 }
 
-async function readLegacyFallbackValue<TValue>(property: SecureStorageProperty<TValue, any>) {
+async function readLegacyFallbackValue<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty) {
   if (!property.legacyFallback) {
-    return { hasValue: false, value: null as TValue | null };
+    return { hasValue: false, value: null as SecureStoragePropertyValue<TProperty> | null };
   }
 
   try {
@@ -545,14 +547,14 @@ async function readLegacyFallbackValue<TValue>(property: SecureStorageProperty<T
   }
 }
 
-async function readDefaultValue<TValue>(property: SecureStorageProperty<TValue, any>) {
+async function readDefaultValue<TProperty extends SecureStorageProperty<any, any, any, any>>(property: TProperty) {
   if (property.defaultValue === undefined) {
-    return { hasValue: false, value: null as TValue | null };
+    return { hasValue: false, value: null as SecureStoragePropertyValue<TProperty> | null };
   }
 
   try {
     if (typeof property.defaultValue === 'function') {
-      const buildDefaultValue = property.defaultValue as () => TValue | Promise<TValue>;
+      const buildDefaultValue = property.defaultValue as () => SecureStoragePropertyValue<TProperty> | Promise<SecureStoragePropertyValue<TProperty>>;
       return {
         hasValue: true,
         value: await buildDefaultValue(),
@@ -571,7 +573,7 @@ async function readDefaultValue<TValue>(property: SecureStorageProperty<TValue, 
   }
 }
 
-async function assertAccessAllowed(authStateProvider: CreateSecureStorageOptions['authStateProvider'], property: SecureStorageProperty<any, any>, operation: string) {
+async function assertAccessAllowed(authStateProvider: CreateSecureStorageOptions['authStateProvider'], property: SecureStorageProperty<any, any, any, any>, operation: string) {
   const authState = await authStateProvider.getAuthState();
 
   if (property.scope === 'user' && !authState?.hasBoundUser) {
@@ -590,7 +592,7 @@ async function assertAccessAllowed(authStateProvider: CreateSecureStorageOptions
 }
 
 function decodePropertyValue<TValue>(
-  property: SecureStorageProperty<TValue, any>,
+  property: SecureStorageProperty<TValue, any, any, any>,
   envelope: SecureStorageStoredEnvelope<TValue>,
   codecRegistry: ReturnType<typeof createCodecRegistry>,
   operation: string,
@@ -614,7 +616,7 @@ function decodePropertyValue<TValue>(
 }
 
 function encodePropertyValue<TValue>(
-  property: SecureStorageProperty<TValue, any>,
+  property: SecureStorageProperty<TValue, any, any, any>,
   value: TValue,
   itemMetadata: any,
   codecRegistry: ReturnType<typeof createCodecRegistry>,
@@ -632,7 +634,7 @@ function encodePropertyValue<TValue>(
 }
 
 function createCodecContext(
-  property: SecureStorageProperty<any, any>,
+  property: SecureStorageProperty<any, any, any, any>,
   itemMetadata: any,
   codecRegistry: ReturnType<typeof createCodecRegistry>,
 ): SecureStorageCodecContext {

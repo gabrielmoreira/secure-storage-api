@@ -86,7 +86,13 @@ await secureStorage.remove(refreshToken);
 ### Typed property values
 
 The property carries the value type implied by its codec.
-That means `set(property, value)` expects the codec value type, and `get(property)` returns that same type (or `null` when missing).
+That means `set(property, value)` expects the codec value type.
+
+For `get(property)`, the return type follows the full resolution chain:
+- if the property may still end with no value, `get()` returns `T | null`
+- if `legacyFallback` guarantees a value, `get()` returns `T`
+- if `defaultValue` guarantees a value, `get()` returns `T`
+- if `legacyFallback` is nullable but `defaultValue` guarantees a value, `get()` still returns `T`
 
 ```ts
 const retryCount = defineSecureStorageProperty({
@@ -95,22 +101,32 @@ const retryCount = defineSecureStorageProperty({
   codec: 'number',
 });
 
-await secureStorage.set(retryCount, 3);
-const value = await secureStorage.get(retryCount);
+const maybeRetryCount = await secureStorage.get(retryCount);
 //    ^? number | null
 
-const hasAcceptedTerms = defineSecureStorageProperty({
-  namespace: 'onboarding',
-  name: 'hasAcceptedTerms',
-  codec: 'boolean',
+const defaultedRetryCount = defineSecureStorageProperty({
+  namespace: 'sync',
+  name: 'defaultedRetryCount',
+  codec: 'number',
+  defaultValue: 0,
 });
 
-await secureStorage.set(hasAcceptedTerms, true);
-const accepted = await secureStorage.get(hasAcceptedTerms);
-//    ^? boolean | null
+const retryCountValue = await secureStorage.get(defaultedRetryCount);
+//    ^? number
+
+const acceptedTerms = defineSecureStorageProperty({
+  namespace: 'onboarding',
+  name: 'acceptedTerms',
+  codec: 'boolean',
+  legacyFallback: async () => true,
+  legacyCleanup: async () => {},
+});
+
+const accepted = await secureStorage.get(acceptedTerms);
+//    ^? boolean
 ```
 
-The same applies to custom codecs. Once a property is defined with a typed codec, `get()` and `set()` follow that type.
+The same applies to custom codecs. Once a property is defined with a typed codec, `get()` and `set()` follow that type, and `get()` also reflects whether the resolution chain still allows `null`.
 
 ### Built-in codecs
 
