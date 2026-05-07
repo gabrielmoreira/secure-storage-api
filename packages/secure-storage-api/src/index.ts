@@ -22,6 +22,32 @@ export {
   defineSecureStorageProperty,
 } from './api.ts';
 
+export type {
+  CreateSecureStorageOptions,
+  SecureStorage,
+  SecureStorageAccessMode,
+  SecureStorageAuthState,
+  SecureStorageAuthStateProvider,
+  SecureStorageBackend,
+  SecureStorageBackendAccessOptions,
+  SecureStorageCleanupSummary,
+  SecureStorageCodec,
+  SecureStorageCodecContext,
+  SecureStorageCodecName,
+  SecureStorageCodecValue,
+  SecureStorageDecodeResult,
+  SecureStorageDiagnostics,
+  SecureStorageDiagnosticsEntry,
+  SecureStorageFeatureFlags,
+  SecureStorageItemMetadata,
+  SecureStorageLegacyCleanupStatus,
+  SecureStorageProperty,
+  SecureStoragePropertyMetadata,
+  SecureStoragePropertyRegistry,
+  SecureStorageScope,
+  SecureStorageStoredEnvelope,
+} from './api.ts';
+
 export {
   builtInCodecs,
   createZodJsonCodec,

@@ -121,6 +121,45 @@ const preferences = defineSecureStorageProperty({
 
 Custom codecs are supported as long as they expose `encode()` and `decode()`.
 
+## Typed property values
+
+The package is designed so the property carries the value type implied by its codec.
+
+In practice:
+- `secureStorage.set(property, value)` expects the codec value type
+- `secureStorage.get(property)` returns either `T | null` or `T`, depending on whether the resolution chain can still end without a value
+
+That means:
+- no `legacyFallback` or `defaultValue` guarantee -> `get()` returns `T | null`
+- non-null `legacyFallback` -> `get()` returns `T`
+- non-null `defaultValue` -> `get()` returns `T`
+- nullable `legacyFallback` plus non-null `defaultValue` -> `get()` still returns `T`
+
+Example:
+
+```ts
+const retryCount = defineSecureStorageProperty({
+  namespace: 'sync',
+  name: 'retryCount',
+  codec: 'number',
+});
+
+const maybeRetryCount = await secureStorage.get(retryCount);
+// maybeRetryCount: number | null
+
+const defaultedRetryCount = defineSecureStorageProperty({
+  namespace: 'sync',
+  name: 'defaultedRetryCount',
+  codec: 'number',
+  defaultValue: 0,
+});
+
+const retryCountValue = await secureStorage.get(defaultedRetryCount);
+// retryCountValue: number
+```
+
+This also works for custom codecs such as `createZodJsonCodec(...)`.
+
 ## Migration through codecs
 
 Version migration belongs to codecs.
