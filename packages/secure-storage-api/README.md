@@ -160,6 +160,8 @@ const retryCountValue = await secureStorage.get(defaultedRetryCount);
 
 This also works for custom codecs such as `createZodJsonCodec(...)`.
 
+The same contract applies at runtime: `defaultValue` should always resolve to a real codec-aligned value, not `undefined`.
+
 ## Migration through codecs
 
 Version migration belongs to codecs.

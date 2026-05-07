@@ -555,9 +555,15 @@ async function readDefaultValue<TProperty extends SecureStorageProperty<any, any
   try {
     if (typeof property.defaultValue === 'function') {
       const buildDefaultValue = property.defaultValue as () => SecureStoragePropertyValue<TProperty> | Promise<SecureStoragePropertyValue<TProperty>>;
+      const resolvedValue = await buildDefaultValue();
+
+      if (resolvedValue === undefined) {
+        throw new TypeError('defaultValue function must resolve to a codec-aligned value, not undefined.');
+      }
+
       return {
         hasValue: true,
-        value: await buildDefaultValue(),
+        value: resolvedValue,
       };
     }
 

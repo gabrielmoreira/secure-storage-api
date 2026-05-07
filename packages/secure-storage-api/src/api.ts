@@ -88,8 +88,7 @@ export type SecureStorageDefaultValueInput<TResult> =
 export type SecureStorageLegacyFallbackInput<TResult> =
   () => TResult | Promise<TResult>;
 
-type AwaitedValue<TValue> =
-  TValue extends Promise<infer TResult> ? AwaitedValue<TResult> : TValue;
+type AwaitedValue<TValue> = Awaited<TValue>;
 
 export interface SecureStorageProperty<
   TValue = string,
@@ -148,6 +147,11 @@ type SecureStorageGuaranteesValue<TValue> =
   null extends TValue ? false :
   true;
 
+/**
+ * `get()` follows the real resolution chain.
+ * Legacy fallback is checked before default value, and either source only removes `null`
+ * from the return type when it guarantees a codec-aligned non-null value.
+ */
 export type SecureStorageGetResult<TProperty extends SecureStorageProperty<any, any, any, any>> =
   SecureStorageGuaranteesValue<SecureStorageResolvedLegacyFallbackValue<TProperty>> extends true ? SecureStoragePropertyValue<TProperty> :
   SecureStorageGuaranteesValue<SecureStorageResolvedDefaultValue<TProperty>> extends true ? SecureStoragePropertyValue<TProperty> :

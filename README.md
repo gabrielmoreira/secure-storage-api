@@ -127,6 +127,7 @@ const accepted = await secureStorage.get(acceptedTerms);
 ```
 
 The same applies to custom codecs. Once a property is defined with a typed codec, `get()` and `set()` follow that type, and `get()` also reflects whether the resolution chain still allows `null`.
+The same runtime contract applies to `defaultValue`: it should resolve to a real codec-aligned value, not `undefined`.
 
 ### Built-in codecs
 
