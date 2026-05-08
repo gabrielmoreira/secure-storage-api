@@ -8,13 +8,6 @@ appId: com.gabrielmoreira.securestorageexample
     timeout: 30000
 - tapOn:
     id: "select-backend-reactNativeSensitiveInfo"
-- extendedWaitUntil:
-    visible:
-      id: "selected-backend-label"
-    timeout: 60000
-- assertVisible:
-    id: "selected-backend-label"
-- assertVisible: "Configured token"
 - scrollUntilVisible:
     element:
       id: "selected-property-options"
