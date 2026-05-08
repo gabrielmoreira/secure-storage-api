@@ -1,9 +1,11 @@
 import type {
+  SecurePropertyOptions,
   SecureStorageBackend,
   SecureStorageBackendAccessOptions,
 } from 'secure-storage-api';
 
 const DEFAULT_SERVICE = 'secure-storage';
+const REACT_NATIVE_SENSITIVE_INFO_OPTIONS_KEY = 'reactNativeSensitiveInfo';
 
 export interface ReactNativeSensitiveInfoItem {
   key: string;
@@ -47,6 +49,22 @@ export interface CreateReactNativeSensitiveInfoBackendOptions {
   userPresenceOptions?: ReactNativeSensitiveInfoOptions;
 }
 
+export interface ReactNativeSensitiveInfoPropertyOptions {
+  accessControl?: string;
+  authenticationPrompt?: ReactNativeSensitiveInfoPrompt;
+  keychainGroup?: string;
+  keychainService?: string;
+  service?: string;
+}
+
+export function createReactNativeSensitiveInfoOptions<const TOptions extends ReactNativeSensitiveInfoPropertyOptions>(
+  options: TOptions,
+): { reactNativeSensitiveInfo: TOptions } {
+  return {
+    reactNativeSensitiveInfo: options,
+  };
+}
+
 export function createReactNativeSensitiveInfoBackend(
   options: CreateReactNativeSensitiveInfoBackendOptions = {},
 ): SecureStorageBackend {
@@ -61,13 +79,22 @@ export function createReactNativeSensitiveInfoBackend(
     return sensitiveInfo;
   }
 
-  function createItemOptions(accessOptions?: SecureStorageBackendAccessOptions): ReactNativeSensitiveInfoOptions {
+  function createItemOptions(key: string, accessOptions?: SecureStorageBackendAccessOptions): ReactNativeSensitiveInfoOptions {
+    const propertyOptions = readReactNativeSensitiveInfoPropertyOptions(accessOptions?.propertyOptions);
+
     if (accessOptions?.requiresUserPresence) {
+      const accessControl = propertyOptions?.accessControl && propertyOptions.accessControl !== 'none'
+        ? propertyOptions.accessControl
+        : options.userPresenceOptions?.accessControl && options.userPresenceOptions.accessControl !== 'none'
+          ? options.userPresenceOptions.accessControl
+          : 'biometryAny';
+
       return {
         service,
         ...options.baseOptions,
-        accessControl: 'biometryAny',
+        ...propertyOptions,
         ...options.userPresenceOptions,
+        accessControl,
       };
     }
 
@@ -75,6 +102,7 @@ export function createReactNativeSensitiveInfoBackend(
       service,
       accessControl: 'none',
       ...options.baseOptions,
+      ...propertyOptions,
     };
   }
 
@@ -86,7 +114,7 @@ export function createReactNativeSensitiveInfoBackend(
     async getItem(key, accessOptions = undefined) {
       const sensitiveInfo = await getSensitiveInfo();
       const item = await sensitiveInfo.getItem(toNativeKey(key), {
-        ...createItemOptions(accessOptions),
+        ...createItemOptions(key, accessOptions),
         includeValue: true,
       });
       return item?.value ?? null;
@@ -94,12 +122,12 @@ export function createReactNativeSensitiveInfoBackend(
 
     async setItem(key, value, accessOptions = undefined) {
       const sensitiveInfo = await getSensitiveInfo();
-      await sensitiveInfo.setItem(toNativeKey(key), value, createItemOptions(accessOptions));
+      await sensitiveInfo.setItem(toNativeKey(key), value, createItemOptions(key, accessOptions));
     },
 
     async removeItem(key, accessOptions = undefined) {
       const sensitiveInfo = await getSensitiveInfo();
-      await sensitiveInfo.deleteItem(toNativeKey(key), createItemOptions(accessOptions));
+      await sensitiveInfo.deleteItem(toNativeKey(key), createItemOptions(key, accessOptions));
     },
 
     async getAllKeys() {
@@ -163,4 +191,13 @@ function decodeStorageKey(encodedKey: string) {
   }
 
   return decodeURIComponent(Array.from(bytes, (byte) => `%${byte.toString(16).padStart(2, '0')}`).join(''));
+}
+
+function readReactNativeSensitiveInfoPropertyOptions(propertyOptions?: SecurePropertyOptions) {
+  const candidate = propertyOptions?.[REACT_NATIVE_SENSITIVE_INFO_OPTIONS_KEY];
+  return isRecord(candidate) ? candidate as ReactNativeSensitiveInfoPropertyOptions : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

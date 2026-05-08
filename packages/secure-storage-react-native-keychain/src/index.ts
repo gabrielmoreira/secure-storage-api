@@ -1,10 +1,12 @@
 import type {
+  SecurePropertyOptions,
   SecureStorageBackend,
   SecureStorageBackendAccessOptions,
 } from 'secure-storage-api';
 
 const DEFAULT_SERVICE_PREFIX = 'secure-storage';
 const DEFAULT_USERNAME = 'secure-storage';
+const REACT_NATIVE_KEYCHAIN_OPTIONS_KEY = 'reactNativeKeychain';
 
 export interface ReactNativeKeychainCredentials {
   password: string;
@@ -37,6 +39,23 @@ export interface CreateReactNativeKeychainBackendOptions {
   username?: string;
 }
 
+export interface ReactNativeKeychainPropertyOptions {
+  accessControl?: string;
+  accessible?: string;
+  accessGroup?: string;
+  authenticationPrompt?: string | { title?: string; subtitle?: string; description?: string; cancel?: string };
+  service?: string;
+  securityLevel?: string;
+}
+
+export function createReactNativeKeychainOptions<const TOptions extends ReactNativeKeychainPropertyOptions>(
+  options: TOptions,
+): { reactNativeKeychain: TOptions } {
+  return {
+    reactNativeKeychain: options,
+  };
+}
+
 export function createReactNativeKeychainBackend(
   options: CreateReactNativeKeychainBackendOptions = {},
 ): SecureStorageBackend {
@@ -52,12 +71,14 @@ export function createReactNativeKeychainBackend(
     return keychain;
   }
 
-  async function createItemOptions(accessOptions?: SecureStorageBackendAccessOptions) {
+  async function createItemOptions(key: string, accessOptions?: SecureStorageBackendAccessOptions) {
     const keychain = await getKeychain();
+    const propertyOptions = readReactNativeKeychainPropertyOptions(accessOptions?.propertyOptions);
 
     if (accessOptions?.requiresUserPresence) {
       return {
         ...options.baseOptions,
+        ...propertyOptions,
         ...createDefaultUserPresenceOptions(keychain),
         ...options.userPresenceOptions,
       };
@@ -65,6 +86,7 @@ export function createReactNativeKeychainBackend(
 
     return {
       ...options.baseOptions,
+      ...propertyOptions,
     };
   }
 
@@ -82,26 +104,29 @@ export function createReactNativeKeychainBackend(
   return {
     async getItem(key, accessOptions = undefined) {
       const keychain = await getKeychain();
+      const propertyOptions = await createItemOptions(key, accessOptions);
       const result = await keychain.getGenericPassword({
-        ...(await createItemOptions(accessOptions)),
-        service: createServiceName(key),
+        ...propertyOptions,
+        service: propertyOptions.service ?? createServiceName(key),
       });
       return result ? result.password : null;
     },
 
     async setItem(key, value, accessOptions = undefined) {
       const keychain = await getKeychain();
+      const propertyOptions = await createItemOptions(key, accessOptions);
       await keychain.setGenericPassword(username, value, {
-        ...(await createItemOptions(accessOptions)),
-        service: createServiceName(key),
+        ...propertyOptions,
+        service: propertyOptions.service ?? createServiceName(key),
       });
     },
 
     async removeItem(key, accessOptions = undefined) {
       const keychain = await getKeychain();
+      const propertyOptions = await createItemOptions(key, accessOptions);
       await keychain.resetGenericPassword({
-        ...(await createItemOptions(accessOptions)),
-        service: createServiceName(key),
+        ...propertyOptions,
+        service: propertyOptions.service ?? createServiceName(key),
       });
     },
 
@@ -169,4 +194,13 @@ function decodeStorageKey(encodedKey: string) {
   }
 
   return decodeURIComponent(Array.from(bytes, (byte) => `%${byte.toString(16).padStart(2, '0')}`).join(''));
+}
+
+function readReactNativeKeychainPropertyOptions(propertyOptions?: SecurePropertyOptions) {
+  const candidate = propertyOptions?.[REACT_NATIVE_KEYCHAIN_OPTIONS_KEY];
+  return isRecord(candidate) ? candidate as ReactNativeKeychainPropertyOptions : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

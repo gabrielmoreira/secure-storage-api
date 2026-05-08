@@ -144,7 +144,7 @@ test('userPresence properties pass backend access options for reads and writes',
   assert.ok(sensitiveCalls.length >= 2);
   assert.deepEqual(
     sensitiveCalls.map((call) => call.options),
-    sensitiveCalls.map(() => ({ requiresUserPresence: true })),
+    sensitiveCalls.map(() => ({ propertyOptions: undefined, requiresUserPresence: true })),
   );
 });
 

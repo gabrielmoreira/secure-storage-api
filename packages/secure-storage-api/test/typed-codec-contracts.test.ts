@@ -6,6 +6,7 @@ import {
   createSecureStorage,
   defineSecureStorageProperty,
   createZodJsonCodec,
+  withOptions,
 } from '../src/index.ts';
 
 function createAuthStateProvider(state) {
@@ -176,4 +177,29 @@ test('typed contract: custom schema codec property returns the schema type from 
 
   // Then
   assert.deepEqual(value, { selectedAccountId: 'acc-1' });
+});
+
+test('typed contract: property options stay narrowed when composed inline', () => {
+  // Given
+  const property = defineSecureStorageProperty({
+    namespace: 'vault',
+    name: 'secureNote',
+    codec: 'string',
+    options: withOptions(
+      {
+        expoSecureStore: {
+          authenticationPrompt: 'Unlock secure note',
+        },
+      },
+      {
+        reactNativeKeychain: {
+          accessControl: 'BIOMETRY_ANY',
+        },
+      },
+    ),
+  });
+
+  // Then
+  assert.equal(property.options.expoSecureStore.authenticationPrompt, 'Unlock secure note');
+  assert.equal(property.options.reactNativeKeychain.accessControl, 'BIOMETRY_ANY');
 });

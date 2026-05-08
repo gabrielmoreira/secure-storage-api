@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createReactNativeKeychainBackend } from '../src/index.ts';
+import { createReactNativeKeychainBackend, createReactNativeKeychainOptions } from '../src/index.ts';
 
 function createReactNativeKeychainMock() {
   const items = new Map();
@@ -51,7 +51,6 @@ test('react-native-keychain adapter stores values by encoded service and reads t
   assert.equal(keychain.items.has('secure-storage.7365637572652d73746f726167653a757365723a617574683a746f6b656e'), true);
 });
 
-
 test('react-native-keychain adapter filters unrelated generic password services by prefix', async () => {
   const keychain = createReactNativeKeychainMock();
   keychain.items.set('outside:key', { username: 'outside', password: 'value' });
@@ -61,6 +60,7 @@ test('react-native-keychain adapter filters unrelated generic password services 
 
   assert.deepEqual(await backend.getAllKeys(), ['key-a']);
 });
+
 test('react-native-keychain adapter deletes a stored service entry', async () => {
   const keychain = createReactNativeKeychainMock();
   const backend = createReactNativeKeychainBackend({ keychain: keychain.module });
@@ -87,6 +87,27 @@ test('react-native-keychain adapter maps user presence to keychain access contro
   assert.equal(keychain.setCalls[0].options.accessControl, 'BIOMETRY_ANY_OR_DEVICE_PASSCODE');
   assert.deepEqual(keychain.setCalls[0].options.authenticationPrompt, { title: 'Authenticate now' });
   assert.equal(keychain.getCalls[0].options.accessControl, 'BIOMETRY_ANY_OR_DEVICE_PASSCODE');
+});
+
+test('react-native-keychain adapter merges property-specific options from backend access options', async () => {
+  const keychain = createReactNativeKeychainMock();
+  const backend = createReactNativeKeychainBackend({ keychain: keychain.module });
+
+  await backend.setItem(
+    'key-a',
+    'value-a',
+    {
+      propertyOptions: createReactNativeKeychainOptions({
+        authenticationPrompt: { title: 'Unlock value' },
+        accessGroup: 'shared.group',
+      }),
+      requiresUserPresence: true,
+    },
+  );
+
+  assert.deepEqual(keychain.setCalls[0].options.authenticationPrompt, { title: 'Unlock value' });
+  assert.equal(keychain.setCalls[0].options.accessGroup, 'shared.group');
+  assert.equal(keychain.setCalls[0].options.accessControl, 'BIOMETRY_ANY_OR_DEVICE_PASSCODE');
 });
 
 test('react-native-keychain adapter ignores unrelated or undecodable services when listing keys', async () => {

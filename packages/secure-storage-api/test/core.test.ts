@@ -9,6 +9,7 @@ import {
   createCodecRegistry,
   createPropertyRegistry,
   defineSecureStorageProperty,
+  withOptions,
 } from '../src/index.ts';
 
 test('defineSecureStorageProperty preserves explicit values and defaults the rest', () => {
@@ -32,7 +33,77 @@ test('defineSecureStorageProperty preserves explicit values and defaults the res
     version: 3,
     codec: 'json',
     defaultValue: false,
+    options: undefined,
   });
+});
+
+test('defineSecureStorageProperty preserves narrow inline options on the property const', () => {
+  // When
+  const property = defineSecureStorageProperty({
+    namespace: 'auth',
+    name: 'refreshToken',
+    options: {
+      expoSecureStore: {
+        authenticationPrompt: 'Unlock token',
+      },
+    },
+  });
+
+  // Then
+  assert.equal(property.options.expoSecureStore.authenticationPrompt, 'Unlock token');
+});
+
+test('withOptions merges opaque option fragments without widening the property const shape', () => {
+  // When
+  const property = defineSecureStorageProperty({
+    namespace: 'vault',
+    name: 'secureNote',
+    access: 'userPresence',
+    options: withOptions(
+      {
+        expoSecureStore: {
+          authenticationPrompt: 'Unlock secure note',
+        },
+      },
+      {
+        reactNativeKeychain: {
+          accessControl: 'BIOMETRY_ANY',
+        },
+      },
+      {
+        expoSecureStore: {
+          keychainService: 'vault-notes',
+        },
+      },
+    ),
+  });
+
+  // Then
+  assert.deepEqual(property.options, {
+    expoSecureStore: {
+      authenticationPrompt: 'Unlock secure note',
+      keychainService: 'vault-notes',
+    },
+    reactNativeKeychain: {
+      accessControl: 'BIOMETRY_ANY',
+    },
+  });
+  assert.equal(property.options.expoSecureStore.keychainService, 'vault-notes');
+  assert.equal(property.options.reactNativeKeychain.accessControl, 'BIOMETRY_ANY');
+});
+
+test('defineSecureStorageProperty rejects malformed option buckets', () => {
+  // Then
+  assert.throws(
+    () => defineSecureStorageProperty({
+      namespace: 'auth',
+      name: 'refreshToken',
+      options: {
+        expoSecureStore: 'nope' as never,
+      },
+    }),
+    /options\.expoSecureStore/i,
+  );
 });
 
 test('defineSecureStorageProperty requires legacyCleanup when legacyFallback exists', () => {
