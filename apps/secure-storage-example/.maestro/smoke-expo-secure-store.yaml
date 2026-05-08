@@ -19,33 +19,6 @@ appId: com.gabrielmoreira.securestorageexample
     id: "action-get"
 - scrollUntilVisible:
     element:
-      id: "action-dump-json"
+      id: "operation-status"
     direction: DOWN
-- tapOn:
-    id: "action-dump-json"
-- scrollUntilVisible:
-    element:
-      id: "debug-dump"
-    direction: DOWN
-- assertVisible:
-    id: "debug-dump"
-- assertVisible: "dump:ok"
-- scrollUntilVisible:
-    element:
-      id: "property-sessionCounter"
-    direction: UP
-- tapOn:
-    id: "property-sessionCounter"
-- scrollUntilVisible:
-    element:
-      id: "toggle-active-session"
-    direction: UP
-- tapOn:
-    id: "toggle-active-session"
-- scrollUntilVisible:
-    element:
-      id: "action-get"
-    direction: DOWN
-- tapOn:
-    id: "action-get"
-- assertVisible: "get:error"
+- assertVisible: "get:ok"

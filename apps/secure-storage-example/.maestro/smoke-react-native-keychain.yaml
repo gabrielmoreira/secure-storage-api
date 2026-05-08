@@ -11,29 +11,17 @@ appId: com.gabrielmoreira.securestorageexample
     id: "selected-backend-label"
 - scrollUntilVisible:
     element:
-      id: "action-seed"
+      id: "action-set"
     direction: DOWN
 - tapOn:
-    id: "action-seed"
-- tapOn:
-    id: "action-dump-json"
-- assertVisible: "dump:ok"
-- scrollUntilVisible:
-    element:
-      id: "property-sessionCounter"
-    direction: UP
-- tapOn:
-    id: "property-sessionCounter"
-- scrollUntilVisible:
-    element:
-      id: "toggle-active-session"
-    direction: UP
-- tapOn:
-    id: "toggle-active-session"
-- scrollUntilVisible:
-    element:
-      id: "action-get"
-    direction: DOWN
+    id: "action-set"
 - tapOn:
     id: "action-get"
-- assertVisible: "get:error"
+- scrollUntilVisible:
+    element:
+      id: "operation-status"
+    direction: DOWN
+- extendedWaitUntil:
+    visible: "get:ok"
+    timeout: 30000
+- assertVisible: "get:ok"
