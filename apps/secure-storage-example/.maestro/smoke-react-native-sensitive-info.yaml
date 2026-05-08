@@ -9,8 +9,10 @@ appId: com.gabrielmoreira.securestorageexample
     id: "select-backend-reactNativeSensitiveInfo"
 - assertVisible:
     id: "selected-backend-label"
-- tapOn:
-    id: "property-configuredToken"
+- scrollUntilVisible:
+    element:
+      id: "selected-property-options"
+    direction: DOWN
 - assertVisible: "secure-storage-example.configured-token"
 - scrollUntilVisible:
     element:
