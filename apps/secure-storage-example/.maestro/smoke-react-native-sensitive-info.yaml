@@ -1,6 +1,7 @@
 appId: com.gabrielmoreira.securestorageexample
 ---
-- launchApp
+- launchApp:
+    stopApp: true
 - extendedWaitUntil:
     visible:
       id: "select-backend-reactNativeSensitiveInfo"
