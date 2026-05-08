@@ -1,0 +1,39 @@
+appId: com.gabrielmoreira.securestorageexample
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "select-backend-reactNativeKeychain"
+    timeout: 30000
+- tapOn:
+    id: "select-backend-reactNativeKeychain"
+- assertVisible:
+    id: "selected-backend-label"
+- scrollUntilVisible:
+    element:
+      id: "action-seed"
+    direction: DOWN
+- tapOn:
+    id: "action-seed"
+- tapOn:
+    id: "action-dump-json"
+- assertVisible: "dump:ok"
+- scrollUntilVisible:
+    element:
+      id: "property-sessionCounter"
+    direction: UP
+- tapOn:
+    id: "property-sessionCounter"
+- scrollUntilVisible:
+    element:
+      id: "toggle-active-session"
+    direction: UP
+- tapOn:
+    id: "toggle-active-session"
+- scrollUntilVisible:
+    element:
+      id: "action-get"
+    direction: DOWN
+- tapOn:
+    id: "action-get"
+- assertVisible: "get:error"

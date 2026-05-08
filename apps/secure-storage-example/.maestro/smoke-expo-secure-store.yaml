@@ -1,0 +1,51 @@
+appId: com.gabrielmoreira.securestorageexample
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Secure Storage Example"
+    timeout: 30000
+- assertVisible: "Secure Storage Example"
+- tapOn:
+    id: "select-backend-expoSecureStore"
+- assertVisible:
+    id: "selected-backend-label"
+- scrollUntilVisible:
+    element:
+      id: "action-set"
+    direction: DOWN
+- tapOn:
+    id: "action-set"
+- tapOn:
+    id: "action-get"
+- scrollUntilVisible:
+    element:
+      id: "action-dump-json"
+    direction: DOWN
+- tapOn:
+    id: "action-dump-json"
+- scrollUntilVisible:
+    element:
+      id: "debug-dump"
+    direction: DOWN
+- assertVisible:
+    id: "debug-dump"
+- assertVisible: "dump:ok"
+- scrollUntilVisible:
+    element:
+      id: "property-sessionCounter"
+    direction: UP
+- tapOn:
+    id: "property-sessionCounter"
+- scrollUntilVisible:
+    element:
+      id: "toggle-active-session"
+    direction: UP
+- tapOn:
+    id: "toggle-active-session"
+- scrollUntilVisible:
+    element:
+      id: "action-get"
+    direction: DOWN
+- tapOn:
+    id: "action-get"
+- assertVisible: "get:error"

@@ -1,12 +1,17 @@
 {
   "name": "secure-storage-api-workspace",
   "private": true,
+  "main": "apps/secure-storage-example/index.ts",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
-    "test": "npm run test -w secure-storage-api",
-    "check": "npm run check -w secure-storage-api",
-    "typecheck": "npm run typecheck -w secure-storage-api"
+    "test": "npm run test -w secure-storage-api && npm run test -w secure-storage-expo-secure-store && npm run test -w secure-storage-react-native-keychain && npm run test -w secure-storage-react-native-sensitive-info",
+    "check": "npm run check -w secure-storage-api && npm run check -w secure-storage-expo-secure-store && npm run check -w secure-storage-react-native-keychain && npm run check -w secure-storage-react-native-sensitive-info && npm run check -w secure-storage-example",
+    "typecheck": "npm run typecheck -w secure-storage-api && npm run typecheck -w secure-storage-expo-secure-store && npm run typecheck -w secure-storage-react-native-keychain && npm run typecheck -w secure-storage-react-native-sensitive-info && npm run typecheck -w secure-storage-example",
+    "example:start": "npm run start -w secure-storage-example",
+    "example:android": "npm run android -w secure-storage-example",
+    "example:maestro": "npm run maestro:test -w secure-storage-example"
   }
 }
