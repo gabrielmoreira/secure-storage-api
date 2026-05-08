@@ -13,7 +13,7 @@ appId: com.gabrielmoreira.securestorageexample
     element:
       id: "selected-property-options"
     direction: DOWN
-- assertVisible: "secure-storage-example.configured-token"
+- assertVisible: "expoSecureStore"
 - scrollUntilVisible:
     element:
       id: "action-set"
