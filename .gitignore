@@ -2,5 +2,7 @@ node_modules/
 coverage/
 .env
 .DS_Store
+# Use .local/ for uncommitted logs, diagnostics, generated evidence, and agent scratch work.
+# Put disposable temporary artifacts under .local/tmp/.
 .local/
 .github/pr-body.md
