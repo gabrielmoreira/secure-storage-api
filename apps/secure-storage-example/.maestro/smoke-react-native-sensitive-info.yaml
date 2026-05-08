@@ -8,7 +8,8 @@ appId: com.gabrielmoreira.securestorageexample
 - tapOn:
     id: "select-backend-reactNativeSensitiveInfo"
 - extendedWaitUntil:
-    visible: "Backend: React Native Sensitive Info"
+    visible:
+      id: "selected-backend-label"
     timeout: 30000
 - assertVisible:
     id: "selected-backend-label"
