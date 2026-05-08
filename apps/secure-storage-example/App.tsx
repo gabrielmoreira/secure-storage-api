@@ -213,6 +213,15 @@ export default function App() {
       }));
 
       const decodedEntries = await Promise.all(demoPropertyCatalog.map(async (entry) => {
+        if (entry.property.access === 'userPresence') {
+          return {
+            id: entry.id,
+            label: entry.label,
+            status: 'skipped',
+            reason: 'Skipped in dump evidence because this property requires user presence.',
+          };
+        }
+
         try {
           const value = await session.storage.get(entry.property as never);
           return {
@@ -432,6 +441,7 @@ export default function App() {
           <Text style={styles.caption}>
             This block is selectable and copyable. It includes the selected property metadata, its configured adapter options, diagnostics, decoded values, and raw backend entries.
           </Text>
+          <StatusPill label={lastStatus} testID="technical-evidence-status" />
           <SelectableBlock label="Debug JSON" testID="debug-dump">{dumpJson || 'No dump generated yet.'}</SelectableBlock>
         </View>
 
