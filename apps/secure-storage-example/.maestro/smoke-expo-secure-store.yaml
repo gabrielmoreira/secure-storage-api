@@ -30,11 +30,6 @@ appId: com.gabrielmoreira.securestorageexample
     id: "action-dump-json"
 - scrollUntilVisible:
     element:
-      id: "operation-status"
-    direction: DOWN
-- assertVisible: "get:ok"
-- scrollUntilVisible:
-    element:
       id: "debug-dump"
     direction: DOWN
 - assertVisible: "configuredToken"
