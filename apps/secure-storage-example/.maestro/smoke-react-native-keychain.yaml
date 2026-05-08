@@ -9,6 +9,9 @@ appId: com.gabrielmoreira.securestorageexample
     id: "select-backend-reactNativeKeychain"
 - assertVisible:
     id: "selected-backend-label"
+- tapOn:
+    id: "property-configuredToken"
+- assertVisible: "secure-storage-example.configured-token"
 - scrollUntilVisible:
     element:
       id: "action-set"
@@ -17,6 +20,8 @@ appId: com.gabrielmoreira.securestorageexample
     id: "action-set"
 - tapOn:
     id: "action-get"
+- tapOn:
+    id: "action-dump-json"
 - scrollUntilVisible:
     element:
       id: "operation-status"
@@ -25,3 +30,8 @@ appId: com.gabrielmoreira.securestorageexample
     visible: "get:ok"
     timeout: 30000
 - assertVisible: "get:ok"
+- scrollUntilVisible:
+    element:
+      id: "debug-dump"
+    direction: DOWN
+- assertVisible: "configuredToken"

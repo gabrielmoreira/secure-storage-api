@@ -1,6 +1,6 @@
 import type { SecureStorageProperty } from 'secure-storage-api';
 
-export function parseInputValue(property: SecureStorageProperty<any, any, any, any>, rawValue: string) {
+export function parseInputValue(property: SecureStorageProperty<any, any, any, any, any>, rawValue: string) {
   if (property.codec === 'number') {
     const parsed = Number(rawValue);
     if (!Number.isFinite(parsed)) {
@@ -20,7 +20,11 @@ export function parseInputValue(property: SecureStorageProperty<any, any, any, a
   }
 
   if (property.codec === 'json') {
-    return JSON.parse(rawValue);
+    try {
+      return JSON.parse(rawValue) as unknown;
+    } catch (error) {
+      throw new Error('JSON properties require a valid JSON input.', { cause: error });
+    }
   }
 
   return rawValue;
