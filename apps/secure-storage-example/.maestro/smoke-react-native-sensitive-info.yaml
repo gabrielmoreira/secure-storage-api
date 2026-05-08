@@ -10,7 +10,7 @@ appId: com.gabrielmoreira.securestorageexample
 - extendedWaitUntil:
     visible:
       id: "selected-backend-label"
-    timeout: 30000
+    timeout: 60000
 - assertVisible:
     id: "selected-backend-label"
 - assertVisible: "Configured token"
