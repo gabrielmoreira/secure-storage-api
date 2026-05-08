@@ -9,11 +9,11 @@ appId: com.gabrielmoreira.securestorageexample
     id: "select-backend-reactNativeKeychain"
 - assertVisible:
     id: "selected-backend-label"
+- assertVisible: "Configured token"
 - scrollUntilVisible:
     element:
       id: "selected-property-options"
     direction: DOWN
-- assertVisible: "expoSecureStore"
 - scrollUntilVisible:
     element:
       id: "action-set"
