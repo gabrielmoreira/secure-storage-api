@@ -57,6 +57,18 @@ test('defineSecureStorageProperty rejects invalid namespace, name, and version',
   );
 });
 
+test('defineSecureStorageProperty currently accepts symbolic namespace and name segments', () => {
+  // When
+  const property = defineSecureStorageProperty({
+    namespace: 'auth/session',
+    name: 'refresh:token.v2',
+  });
+
+  // Then
+  assert.equal(property.namespace, 'auth/session');
+  assert.equal(property.name, 'refresh:token.v2');
+});
+
 test('built-in codecs encode and decode the supported primitive shapes', () => {
   // Then
   assert.equal(builtInCodecs.string.encode('abc'), 'abc');

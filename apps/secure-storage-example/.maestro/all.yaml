@@ -1,0 +1,5 @@
+appId: com.gabrielmoreira.securestorageexample
+---
+- runFlow: smoke-expo-secure-store.yaml
+- runFlow: smoke-react-native-keychain.yaml
+- runFlow: smoke-react-native-sensitive-info.yaml

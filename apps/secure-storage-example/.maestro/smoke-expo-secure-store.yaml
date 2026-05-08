@@ -1,0 +1,24 @@
+appId: com.gabrielmoreira.securestorageexample
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Secure Storage Example"
+    timeout: 30000
+- assertVisible: "Secure Storage Example"
+- tapOn:
+    id: "select-backend-expoSecureStore"
+- assertVisible:
+    id: "selected-backend-label"
+- scrollUntilVisible:
+    element:
+      id: "action-set"
+    direction: DOWN
+- tapOn:
+    id: "action-set"
+- tapOn:
+    id: "action-get"
+- scrollUntilVisible:
+    element:
+      id: "operation-status"
+    direction: DOWN
+- assertVisible: "get:ok"

@@ -15,12 +15,14 @@ Today it gives you:
 - executable samples and tests
 
 Today it does **not** give you:
-- a real secure storage backend adapter
-- native secure storage integration
-- platform-specific auth prompts or biometrics integration
+- a built-in cross-platform backend inside `secure-storage-api` itself
+- native secure storage integration directly bundled into the core package
+- platform-specific auth prompts or biometrics integration in the core package
 
 The in-memory backend exists only for prototype validation, tests, and executable examples.
 It is **not** intended as a real secure storage backend.
+
+This repository now also contains thin mobile adapter packages for concrete providers on iOS and Android.
 
 ## Dependency model
 
@@ -35,22 +37,32 @@ This repository is a small monorepo.
 ### Packages
 
 - `packages/secure-storage-api` — the secure storage API package
+- `packages/secure-storage-expo-secure-store` — Expo Secure Store backend adapter
+- `packages/secure-storage-react-native-keychain` — react-native-keychain backend adapter
+- `packages/secure-storage-react-native-sensitive-info` — react-native-sensitive-info backend adapter
 
+### Apps
+
+- `apps/secure-storage-example` — Expo prebuild example app covering all three mobile adapters
 ## Install and run
 
 From the repository root:
 
 ```bash
 mise install
-npm test
-npm run check
-npm run typecheck
+npm install
+mise run validate
+mise run example:prebuild
+mise run example:android:e2e
 ```
+
+The Android E2E task standardizes on Metro port `8081` and uses the same mise task locally and in CI so Android emulator runs follow the same flow in both places.
 
 ## Usage
 
 The main usage documentation lives here in the repository root for now.
 The package-specific technical notes live in `packages/secure-storage-api/README.md`.
+The adapter-specific technical notes live in their package READMEs under `packages/`.
 
 ### Quick example
 

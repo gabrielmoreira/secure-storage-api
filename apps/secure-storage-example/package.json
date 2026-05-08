@@ -1,0 +1,33 @@
+{
+  "name": "secure-storage-example",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "maestro:test": "maestro test .maestro"
+  },
+  "dependencies": {
+    "expo": "~54.0.33",
+    "expo-secure-store": "~15.0.7",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-keychain": "^10.0.0",
+    "react-native-nitro-modules": "^0.35.0",
+    "react-native-sensitive-info": "^6.0.0",
+    "secure-storage-api": "^0.1.0",
+    "secure-storage-expo-secure-store": "^0.1.0",
+    "secure-storage-react-native-keychain": "^0.1.0",
+    "secure-storage-react-native-sensitive-info": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
+  }
+}

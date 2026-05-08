@@ -1,0 +1,27 @@
+appId: com.gabrielmoreira.securestorageexample
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "select-backend-reactNativeSensitiveInfo"
+    timeout: 30000
+- tapOn:
+    id: "select-backend-reactNativeSensitiveInfo"
+- assertVisible:
+    id: "selected-backend-label"
+- scrollUntilVisible:
+    element:
+      id: "action-set"
+    direction: DOWN
+- tapOn:
+    id: "action-set"
+- tapOn:
+    id: "action-get"
+- scrollUntilVisible:
+    element:
+      id: "operation-status"
+    direction: DOWN
+- extendedWaitUntil:
+    visible: "get:ok"
+    timeout: 30000
+- assertVisible: "get:ok"

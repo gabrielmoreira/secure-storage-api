@@ -26,6 +26,8 @@ Important:
 
 The direction is to evolve this package by adding adapters for different secure storage providers while keeping the API contract stable.
 
+This repository also includes thin mobile adapter packages for Expo Secure Store, react-native-keychain, and react-native-sensitive-info so the core contract can stay backend-agnostic while concrete providers evolve separately.
+
 ## Principles
 
 - one storage API for all modules
