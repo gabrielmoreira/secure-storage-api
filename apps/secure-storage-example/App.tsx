@@ -2,7 +2,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -297,7 +296,7 @@ export default function App() {
 
   if (!selectedBackendId || !session) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <View style={styles.screen}>
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.title}>Secure Storage Example</Text>
@@ -327,12 +326,12 @@ export default function App() {
           <Text style={styles.caption}>{loadingMessage || 'Android custom dev client required for the full native matrix.'}</Text>
           <SelectableBlock label="Selection result" testID="selection-result">{lastResult}</SelectableBlock>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <View style={styles.screen}>
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Secure Storage Example</Text>
@@ -460,7 +459,7 @@ export default function App() {
           <Text style={styles.backButtonText}>Back to backend selection</Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
