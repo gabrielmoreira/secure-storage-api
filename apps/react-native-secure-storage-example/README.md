@@ -1,13 +1,19 @@
-# secure-storage-example
+# react-native-secure-storage-example
 
-An Expo prebuild example app for the `secure-storage-api` monorepo.
+An Expo prebuild React Native example app for the `secure-storage-api` monorepo.
 
 ## Goal
 
-This app demonstrates the generic `secure-storage-api` surface on top of three different mobile backend adapters:
+This app demonstrates the generic `secure-storage-api` surface on top of three different React Native-oriented backend adapters:
 - Expo Secure Store
 - react-native-keychain
 - react-native-sensitive-info
+
+It is not meant to represent every possible secure-storage platform. The app is a React Native iOS/Android lab for device-bound storage, user presence, biometric/passcode prompt behavior, adapter-specific property options, and Android Maestro automation.
+
+## Platform scope
+
+The core API remains backend-agnostic, but this app intentionally follows the React Native/Expo path. Platform families such as browser, desktop keychain, passkey/WebAuthn-adjacent, server KMS, or non-React-Native native SDKs may need different adapters and different verification apps.
 
 ## Why prebuild/native app
 

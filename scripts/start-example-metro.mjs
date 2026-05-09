@@ -18,7 +18,7 @@ if (await isMetroAlreadyRunning()) {
 
 await runCommand(
   npmCommand,
-  ['run', 'start', '-w', 'secure-storage-example', '--', '--dev-client', '--localhost', '--port', '8081'],
+  ['run', 'start', '-w', 'react-native-secure-storage-example', '--', '--dev-client', '--localhost', '--port', '8081'],
   {
     cwd: repoRoot,
     env: {

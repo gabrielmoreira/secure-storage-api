@@ -11,13 +11,13 @@ const registry = createPropertyRegistry();
 
 const configuredTokenOptions = withOptions(
   createExpoSecureStoreOptions({
-    keychainService: 'secure-storage-example.configured-token',
+    keychainService: 'react-native-secure-storage-example.configured-token',
   }),
   createReactNativeKeychainOptions({
-    service: 'secure-storage-example.configured-token',
+    service: 'react-native-secure-storage-example.configured-token',
   }),
   createReactNativeSensitiveInfoOptions({
-    service: 'secure-storage-example.configured-token',
+    service: 'react-native-secure-storage-example.configured-token',
   }),
 );
 

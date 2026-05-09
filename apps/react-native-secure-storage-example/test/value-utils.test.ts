@@ -9,13 +9,13 @@ test('configured token demo property exposes composed property options for app e
 
   assert.deepEqual(configuredToken.options, {
     expoSecureStore: {
-      keychainService: 'secure-storage-example.configured-token',
+      keychainService: 'react-native-secure-storage-example.configured-token',
     },
     reactNativeKeychain: {
-      service: 'secure-storage-example.configured-token',
+      service: 'react-native-secure-storage-example.configured-token',
     },
     reactNativeSensitiveInfo: {
-      service: 'secure-storage-example.configured-token',
+      service: 'react-native-secure-storage-example.configured-token',
     },
   });
 });

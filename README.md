@@ -22,7 +22,15 @@ Today it does **not** give you:
 The in-memory backend exists only for prototype validation, tests, and executable examples.
 It is **not** intended as a real secure storage backend.
 
-This repository now also contains thin mobile adapter packages for concrete providers on iOS and Android.
+This repository now also contains thin React Native adapter packages for concrete iOS and Android providers.
+
+## Platform posture
+
+The core package is intentionally backend-agnostic: it defines properties, codecs, metadata, diagnostics, and storage orchestration without importing platform SDKs or knowing provider-specific option names.
+
+The first production-shaped adapters and the executable app are intentionally **React Native first**. They exercise Expo Secure Store, react-native-keychain, and react-native-sensitive-info on iOS/Android, so the current examples emphasize device-bound storage, user presence, biometric/passcode prompts, Expo prebuild, and Android emulator automation.
+
+Other platform families are still possible behind the same contract, including browser wrappers, desktop keychains, passkeys/WebAuthn-adjacent flows, server-side KMS adapters, or deterministic test backends. They are not yet proven by first-party adapters in this repository, so their platform-specific nuances should live in their own adapter packages rather than in the core API.
 
 ## Dependency model
 
@@ -43,7 +51,7 @@ This repository is a small monorepo.
 
 ### Apps
 
-- `apps/secure-storage-example` — Expo prebuild example app covering all three mobile adapters
+- `apps/react-native-secure-storage-example` — Expo prebuild React Native example app covering all three React Native-oriented adapters
 ## Install and run
 
 From the repository root:

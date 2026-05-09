@@ -1,8 +1,8 @@
 # secure-storage-api
 
-An API-first, backend-agnostic secure storage package.
+An API-first, backend-agnostic secure storage contract.
 
-This package focuses on defining a clear secure storage API before shipping real secure backend adapters.
+This package focuses on defining a clear secure storage API before choosing any concrete secure storage provider. The current repository proves that contract first through React Native iOS/Android adapters, but the core package deliberately stays free of React Native, biometrics, passkeys, browser, server, or desktop-specific types.
 
 ## What this package is
 
@@ -26,7 +26,11 @@ Important:
 
 The direction is to evolve this package by adding adapters for different secure storage providers while keeping the API contract stable.
 
-This repository also includes thin mobile adapter packages for Expo Secure Store, react-native-keychain, and react-native-sensitive-info so the core contract can stay backend-agnostic while concrete providers evolve separately.
+The first concrete adapters in this repository are React Native first: Expo Secure Store, react-native-keychain, and react-native-sensitive-info. They validate device-bound storage and user-presence flows without making the core package depend on React Native or any provider-specific option shape.
+
+## Platform posture
+
+The API should be usable by other platform families, but this package does not claim that their nuances are already solved. Browser storage wrappers, desktop keychains, passkeys/WebAuthn-adjacent flows, server KMS adapters, and deterministic test backends should each express their own guarantees through adapter packages behind the same core contract.
 
 ## Principles
 
@@ -347,8 +351,11 @@ The intended next step is not to grow the core sideways with platform details.
 The intended next step is to add backend adapters for secure storage providers behind the existing API contract.
 
 Examples of future adapters:
-- secure native mobile storage
+- React Native secure storage providers beyond the current three
 - web secure storage wrappers
+- desktop keychain adapters
+- passkey/WebAuthn-adjacent credential flows
+- server-side KMS or secret-manager adapters
 - test/deterministic adapters
 - migration shims around legacy storage providers
 

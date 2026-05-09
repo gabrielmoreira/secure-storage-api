@@ -5,9 +5,9 @@ const sensitiveInfoPlugin = path.join(path.dirname(sensitiveInfoPackageJson), 'a
 
 module.exports = {
   expo: {
-    name: 'secure-storage-example',
-    slug: 'secure-storage-example',
-    scheme: 'secure-storage-example',
+    name: 'react-native-secure-storage-example',
+    slug: 'react-native-secure-storage-example',
+    scheme: 'react-native-secure-storage-example',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -17,7 +17,7 @@ module.exports = {
         'expo-secure-store',
         {
           configureAndroidBackup: true,
-          faceIDPermission: 'Allow Secure Storage Example to access biometric data for secure storage demonstrations.',
+          faceIDPermission: 'Allow React Native Secure Storage Example to access biometric data for secure storage demonstrations.',
         },
       ],
       sensitiveInfoPlugin,
@@ -29,13 +29,13 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.gabrielmoreira.securestorageexample',
+      bundleIdentifier: 'com.gabrielmoreira.reactnativesecurestorageexample',
       infoPlist: {
-        NSFaceIDUsageDescription: 'Allow Secure Storage Example to access biometric data for secure storage demonstrations.',
+        NSFaceIDUsageDescription: 'Allow React Native Secure Storage Example to access biometric data for secure storage demonstrations.',
       },
     },
     android: {
-      package: 'com.gabrielmoreira.securestorageexample',
+      package: 'com.gabrielmoreira.reactnativesecurestorageexample',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
