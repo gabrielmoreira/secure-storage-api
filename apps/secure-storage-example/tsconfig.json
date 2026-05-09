@@ -4,6 +4,6 @@
     "strict": false,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
-    "types": ["react", "react-native"]
+    "types": ["react", "react-native", "node"]
   }
 }

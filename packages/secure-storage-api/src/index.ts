@@ -20,10 +20,12 @@ export {
   createCodecRegistry,
   createPropertyRegistry,
   defineSecureStorageProperty,
+  withOptions,
 } from './api.ts';
 
 export type {
   CreateSecureStorageOptions,
+  SecurePropertyOptions,
   SecureStorage,
   SecureStorageAccessMode,
   SecureStorageAuthState,

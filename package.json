@@ -7,7 +7,7 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "npm run test -w secure-storage-api && npm run test -w secure-storage-expo-secure-store && npm run test -w secure-storage-react-native-keychain && npm run test -w secure-storage-react-native-sensitive-info",
+    "test": "npm run test -w secure-storage-api && npm run test -w secure-storage-expo-secure-store && npm run test -w secure-storage-react-native-keychain && npm run test -w secure-storage-react-native-sensitive-info && npm run test -w secure-storage-example", 
     "check": "npm run check -w secure-storage-api && npm run check -w secure-storage-expo-secure-store && npm run check -w secure-storage-react-native-keychain && npm run check -w secure-storage-react-native-sensitive-info && npm run check -w secure-storage-example",
     "typecheck": "npm run typecheck -w secure-storage-api && npm run typecheck -w secure-storage-expo-secure-store && npm run typecheck -w secure-storage-react-native-keychain && npm run typecheck -w secure-storage-react-native-sensitive-info && npm run typecheck -w secure-storage-example",
     "example:start": "npm run start -w secure-storage-example",

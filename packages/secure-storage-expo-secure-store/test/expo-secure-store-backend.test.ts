@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createExpoSecureStoreBackend } from '../src/index.ts';
+import { createExpoSecureStoreBackend, createExpoSecureStoreOptions } from '../src/index.ts';
 
 function createDeferred() {
   let resolve;
@@ -122,6 +122,28 @@ test('expo adapter enables user presence through requireAuthentication when requ
   assert.equal(dataWrite.options.requireAuthentication, true);
   assert.equal(dataWrite.options.authenticationPrompt, 'Authenticate now');
   assert.equal(dataRead.options.requireAuthentication, true);
+});
+
+test('expo adapter merges property-specific options from backend access options', async () => {
+  const secureStore = createExpoSecureStoreMock();
+  const backend = createExpoSecureStoreBackend({ secureStore: secureStore.module });
+
+  await backend.setItem(
+    'key-a',
+    'value-a',
+    {
+      propertyOptions: createExpoSecureStoreOptions({
+        authenticationPrompt: 'Unlock value',
+        keychainService: 'vault-service',
+      }),
+      requiresUserPresence: true,
+    },
+  );
+
+  const dataWrite = secureStore.setCalls.find((call) => call.key === 'ss_6b65792d61');
+  assert.equal(dataWrite?.options.authenticationPrompt, 'Unlock value');
+  assert.equal(dataWrite?.options.keychainService, 'vault-service');
+  assert.equal(dataWrite?.options.requireAuthentication, true);
 });
 
 test('expo adapter never forwards colon-delimited logical keys directly to the provider', async () => {

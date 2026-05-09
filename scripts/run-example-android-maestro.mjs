@@ -41,6 +41,7 @@ console.log(`Using Android device: ${androidSerial}`);
 try {
   await runCommand(adbCommand, ['-s', androidSerial, 'wait-for-device'], { cwd: repoRoot });
   await normalizeGeneratedAndroidBuildGradle();
+  await waitForAndroidSystem(androidSerial);
 
   if (shouldStartMetro) {
     await freeMetroPortIfNeeded();
@@ -82,6 +83,33 @@ async function detectAndroidSerial() {
   }
 
   return deviceLine.split('\t')[0];
+}
+
+async function waitForAndroidSystem(androidSerial) {
+  const deadline = Date.now() + 120_000;
+  let lastStatus = 'waiting-for-android-services';
+
+  while (Date.now() < deadline) {
+    const bootCompleted = (await captureCommand(adbCommand, ['-s', androidSerial, 'shell', 'getprop', 'sys.boot_completed'], {
+      cwd: repoRoot,
+    }).catch(() => '')).trim() === '1';
+
+    const packageManagerReady = await captureCommand(adbCommand, ['-s', androidSerial, 'shell', 'pm', 'path', 'android'], {
+      cwd: repoRoot,
+    }).then((output) => output.trim().startsWith('package:')).catch((error) => {
+      lastStatus = error instanceof Error ? error.message : String(error);
+      return false;
+    });
+
+    if (bootCompleted && packageManagerReady) {
+      return;
+    }
+
+    lastStatus = `bootCompleted=${bootCompleted} packageManagerReady=${packageManagerReady}`;
+    await sleep(2000);
+  }
+
+  throw new Error(`Timed out waiting for Android system readiness. Last status: ${lastStatus}`);
 }
 
 async function normalizeGeneratedAndroidBuildGradle() {

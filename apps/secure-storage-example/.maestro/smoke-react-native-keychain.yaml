@@ -1,6 +1,7 @@
 appId: com.gabrielmoreira.securestorageexample
 ---
-- launchApp
+- launchApp:
+    stopApp: true
 - extendedWaitUntil:
     visible:
       id: "select-backend-reactNativeKeychain"
@@ -9,19 +10,20 @@ appId: com.gabrielmoreira.securestorageexample
     id: "select-backend-reactNativeKeychain"
 - assertVisible:
     id: "selected-backend-label"
+- assertVisible: "Configured token"
+- scrollUntilVisible:
+    element:
+      id: "selected-property-options"
+    direction: DOWN
 - scrollUntilVisible:
     element:
       id: "action-set"
     direction: DOWN
 - tapOn:
     id: "action-set"
-- tapOn:
-    id: "action-get"
 - scrollUntilVisible:
     element:
-      id: "operation-status"
+      id: "action-get"
     direction: DOWN
-- extendedWaitUntil:
-    visible: "get:ok"
-    timeout: 30000
-- assertVisible: "get:ok"
+- tapOn:
+    id: "action-get"

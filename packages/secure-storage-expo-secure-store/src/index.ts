@@ -1,9 +1,11 @@
 import type {
+  SecurePropertyOptions,
   SecureStorageBackend,
   SecureStorageBackendAccessOptions,
 } from 'secure-storage-api';
 
 const DEFAULT_INDEX_KEY = 'secure-storage.adapter.expo-secure-store.index';
+const EXPO_SECURE_STORE_OPTIONS_KEY = 'expoSecureStore';
 
 export interface ExpoSecureStoreItemOptions {
   accessGroup?: string;
@@ -24,6 +26,22 @@ export interface CreateExpoSecureStoreBackendOptions {
   indexKey?: string;
   secureStore?: ExpoSecureStoreModule;
   userPresenceOptions?: ExpoSecureStoreItemOptions;
+}
+
+export interface ExpoSecureStorePropertyOptions {
+  accessGroup?: string;
+  authenticationPrompt?: string;
+  keychainAccessible?: string | number;
+  keychainService?: string;
+  requireAuthentication?: boolean;
+}
+
+export function createExpoSecureStoreOptions<const TOptions extends ExpoSecureStorePropertyOptions>(
+  options: TOptions,
+): { expoSecureStore: TOptions } {
+  return {
+    expoSecureStore: options,
+  };
 }
 
 export function createExpoSecureStoreBackend(
@@ -48,17 +66,22 @@ export function createExpoSecureStoreBackend(
     return secureStore;
   }
 
-  function createItemOptions(accessOptions?: SecureStorageBackendAccessOptions): ExpoSecureStoreItemOptions {
-    if (accessOptions?.requiresUserPresence) {
+  function createItemOptions(key: string, accessOptions?: SecureStorageBackendAccessOptions): ExpoSecureStoreItemOptions {
+    const propertyOptions = readExpoSecureStorePropertyOptions(accessOptions?.propertyOptions);
+    const hasUserPresence = Boolean(accessOptions?.requiresUserPresence);
+
+    if (hasUserPresence) {
       return {
         ...options.baseOptions,
-        requireAuthentication: true,
+        ...propertyOptions,
         ...options.userPresenceOptions,
+        requireAuthentication: true,
       };
     }
 
     return {
       ...options.baseOptions,
+      ...propertyOptions,
     };
   }
 
@@ -101,7 +124,7 @@ export function createExpoSecureStoreBackend(
   return {
     async getItem(key, accessOptions = undefined) {
       const secureStore = await getSecureStore();
-      return secureStore.getItemAsync(toNativeKey(key), createItemOptions(accessOptions));
+      return secureStore.getItemAsync(toNativeKey(key), createItemOptions(key, accessOptions));
     },
 
     async setItem(key, value, accessOptions = undefined) {
@@ -116,7 +139,7 @@ export function createExpoSecureStoreBackend(
         }
 
         try {
-          await secureStore.setItemAsync(nativeKey, value, createItemOptions(accessOptions));
+          await secureStore.setItemAsync(nativeKey, value, createItemOptions(key, accessOptions));
         } catch (cause) {
           if (!hasKey) {
             await restoreIndexSilently(index);
@@ -139,7 +162,7 @@ export function createExpoSecureStoreBackend(
         }
 
         try {
-          await secureStore.deleteItemAsync(nativeKey, createItemOptions(accessOptions));
+          await secureStore.deleteItemAsync(nativeKey, createItemOptions(key, accessOptions));
         } catch (cause) {
           if (hasKey) {
             await restoreIndexSilently(index);
@@ -189,10 +212,20 @@ async function loadModule<TModule>(moduleName: string): Promise<TModule> {
   const loadedModule = await importModule(moduleName);
   return (loadedModule as { default?: TModule }).default ?? loadedModule;
 }
+
 function encodeStorageKey(key: string) {
   const bytes = typeof TextEncoder !== 'undefined'
     ? new TextEncoder().encode(key)
     : Uint8Array.from(unescape(encodeURIComponent(key)), (char) => char.charCodeAt(0));
 
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function readExpoSecureStorePropertyOptions(propertyOptions?: SecurePropertyOptions) {
+  const candidate = propertyOptions?.[EXPO_SECURE_STORE_OPTIONS_KEY];
+  return isRecord(candidate) ? candidate as ExpoSecureStorePropertyOptions : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

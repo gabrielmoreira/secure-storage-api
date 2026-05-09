@@ -58,5 +58,6 @@ test('defineSecureStorageProperty applies spec defaults in bootstrap slice', () 
     access: 'default',
     version: 1,
     codec: 'string',
+    options: undefined,
   });
 });

@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
+    "test": "node --test --experimental-strip-types",
     "check": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "maestro:test": "maestro test .maestro"
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "@types/node": "^24.7.2",
     "typescript": "~5.9.2"
   }
 }

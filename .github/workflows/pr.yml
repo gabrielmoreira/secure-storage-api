@@ -74,12 +74,6 @@ jobs:
         with:
           path: ${{ env.ANDROID_SDK_ROOT }}
           key: ${{ runner.os }}-android-sdk-api29-googleapis-x86_64-v1
-      - name: Restore Android AVD cache
-        id: restore-android-avd-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.ANDROID_AVD_HOME }}
-          key: ${{ runner.os }}-android-avd-api29-googleapis-x86_64-nexus6-v1
       - name: Enable KVM permissions
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -121,16 +115,16 @@ jobs:
           path: ${{ env.ANDROID_SDK_ROOT }}
           key: ${{ steps.restore-android-sdk-cache.outputs.cache-primary-key }}
       - name: Create Android AVD
-        if: steps.restore-android-avd-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p "$ANDROID_AVD_HOME"
+          rm -rf "$ANDROID_AVD_HOME/test.avd" "$ANDROID_AVD_HOME/test.ini"
           echo no | avdmanager create avd --force -n test -k "system-images;android-29;google_apis;x86_64" --device "Nexus 6"
       - name: Launch Android emulator
         run: |
-          "$ANDROID_HOME/emulator/emulator" -avd test -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -accel on &
+          "$ANDROID_HOME/emulator/emulator" -avd test -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -accel on -wipe-data -no-snapshot-load -no-snapshot-save &
           adb wait-for-device
           until adb shell getprop sys.boot_completed | tr -d '\r' | grep -q '^1$'; do sleep 5; done
-          sleep 10
+          until adb shell pm path android | tr -d '\r' | grep -q '^package:'; do sleep 5; done
       - name: Build Android app through mise task
         run: mise run example:android:build
       - name: Save Android app build cache
@@ -150,12 +144,6 @@ jobs:
           adb -s emulator-5554 emu kill || true
           sleep 20
           find "$ANDROID_AVD_HOME" -name "*.lock" -delete || true
-      - name: Save Android AVD cache
-        if: always() && steps.restore-android-avd-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.ANDROID_AVD_HOME }}
-          key: ${{ steps.restore-android-avd-cache.outputs.cache-primary-key }}
       - name: Save Gradle cache
         if: always() && steps.restore-gradle-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4

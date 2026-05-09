@@ -1,9 +1,25 @@
 import {
   createPropertyRegistry,
   defineSecureStorageProperty,
+  withOptions,
 } from 'secure-storage-api';
+import { createExpoSecureStoreOptions } from 'secure-storage-expo-secure-store';
+import { createReactNativeKeychainOptions } from 'secure-storage-react-native-keychain';
+import { createReactNativeSensitiveInfoOptions } from 'secure-storage-react-native-sensitive-info';
 
 const registry = createPropertyRegistry();
+
+const configuredTokenOptions = withOptions(
+  createExpoSecureStoreOptions({
+    keychainService: 'secure-storage-example.configured-token',
+  }),
+  createReactNativeKeychainOptions({
+    service: 'secure-storage-example.configured-token',
+  }),
+  createReactNativeSensitiveInfoOptions({
+    service: 'secure-storage-example.configured-token',
+  }),
+);
 
 export const demoProperties = {
   appInstallId: registry.defineProperty({
@@ -17,6 +33,13 @@ export const demoProperties = {
     name: 'refreshToken',
     scope: 'user',
     codec: 'string',
+  }),
+  configuredToken: registry.defineProperty({
+    namespace: 'auth',
+    name: 'configuredToken',
+    scope: 'user',
+    codec: 'string',
+    options: configuredTokenOptions,
   }),
   sessionCounter: registry.defineProperty({
     namespace: 'session',
@@ -54,6 +77,7 @@ export const demoProperties = {
 export const demoPropertyList = [
   demoProperties.appInstallId,
   demoProperties.refreshToken,
+  demoProperties.configuredToken,
   demoProperties.sessionCounter,
   demoProperties.acceptedTerms,
   demoProperties.preferences,
@@ -64,42 +88,56 @@ export const demoPropertyCatalog = [
   {
     id: 'appInstallId',
     label: 'App install id',
-    description: 'App-scoped string value',
+    description: 'App-scoped string value that survives user-scoped cleanup.',
+    testFocus: 'Shows the difference between app-scoped storage and user-scoped storage.',
     property: demoProperties.appInstallId,
     exampleValueText: 'install-android-001',
   },
   {
     id: 'refreshToken',
     label: 'Refresh token',
-    description: 'User-scoped string value',
+    description: 'Baseline user-scoped string value.',
+    testFocus: 'Good default property for quick set/get/remove/has checks.',
     property: demoProperties.refreshToken,
     exampleValueText: 'token-123',
   },
   {
+    id: 'configuredToken',
+    label: 'Configured token',
+    description: 'User-scoped string with composed per-adapter property options.',
+    testFocus: 'Exercises property.options composition without depending on biometric UI prompts.',
+    property: demoProperties.configuredToken,
+    exampleValueText: 'configured-token-001',
+  },
+  {
     id: 'sessionCounter',
     label: 'Session counter',
-    description: 'Requires active session',
+    description: 'Numeric value that requires an active session.',
+    testFocus: 'Flip Active session off to confirm access enforcement errors.',
     property: demoProperties.sessionCounter,
     exampleValueText: '41',
   },
   {
     id: 'acceptedTerms',
     label: 'Accepted terms',
-    description: 'Boolean with default false',
+    description: 'Boolean property with default false.',
+    testFocus: 'Useful for checking defaultValue behavior and boolean codec handling.',
     property: demoProperties.acceptedTerms,
     exampleValueText: 'true',
   },
   {
     id: 'preferences',
     label: 'Preferences',
-    description: 'JSON profile preferences',
+    description: 'JSON profile preferences object.',
+    testFocus: 'Exercises the JSON codec and object round-tripping.',
     property: demoProperties.preferences,
     exampleValueText: '{"theme":"dark","marketingOptIn":true}',
   },
   {
     id: 'secureNote',
     label: 'Secure note',
-    description: 'User presence required',
+    description: 'Protected value that requires user presence.',
+    testFocus: 'Compare provider behavior when a protected operation may prompt for authentication.',
     property: demoProperties.secureNote,
     exampleValueText: 'open sesame',
   },
@@ -119,8 +157,8 @@ export function getDemoRegistry() {
   return registry;
 }
 
-export function createDirectJsonProperty(namespace: string, name: string) {
-  return defineSecureStorageProperty<{ value: string }>({
+export function createDirectJsonProperty<TValue = unknown>(namespace: string, name: string) {
+  return defineSecureStorageProperty<TValue>({
     namespace,
     name,
     codec: 'json',

@@ -59,6 +59,7 @@ export function createPropertyMetadata(property) {
  */
 export function createBackendAccessOptions(property) {
   return {
+    propertyOptions: property.options,
     requiresUserPresence: property.access === 'userPresence',
   };
 }

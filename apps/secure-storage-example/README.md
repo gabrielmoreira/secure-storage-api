@@ -19,17 +19,29 @@ It uses native modules that require Expo prebuild / native builds, especially fo
 ## What the app shows
 
 - backend selection on the first screen
-- one generic CRUD screen shared across all backends
+- one shared lab screen that explains what each property scenario is testing
 - toggles for bound-user and active-session auth state
+- copyable property metadata, property adapter options, latest result text, and debug evidence
 - operations for set/get/remove/has/clear user storage
 - a user-presence probe that performs a protected write and protected read so backend prompt behavior can be compared
+- a configured property scenario that demonstrates composed `property.options` without forcing the test to depend on biometric prompt UI
 - a debug JSON dump with:
   - backend identity
   - current auth state
+  - selected property metadata
+  - selected property adapter options
   - diagnostics output
   - decoded property values
   - raw backend entries read directly from the backend
 
+## UI notes
+
+The current screen is intentionally both technical and friendlier to use during manual debugging:
+
+- editable inputs remain copyable
+- read-only result fields are rendered as selectable text blocks so values and evidence can be copied easily
+- the screen explains what the selected property is meant to prove before you run operations
+- the information order now goes from context -> selected property -> input -> actions -> results -> technical evidence
 ## Local development
 
 From the repository root:

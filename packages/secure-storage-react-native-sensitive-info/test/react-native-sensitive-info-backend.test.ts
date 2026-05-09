@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createReactNativeSensitiveInfoBackend } from '../src/index.ts';
+import {
+  createReactNativeSensitiveInfoBackend,
+  createReactNativeSensitiveInfoOptions,
+} from '../src/index.ts';
 
 function createReactNativeSensitiveInfoMock() {
   const items = new Map();
@@ -96,6 +99,27 @@ test('react-native-sensitive-info adapter enables stronger access control for us
   assert.equal(sensitiveInfo.setCalls[0].options.accessControl, 'biometryAny');
   assert.deepEqual(sensitiveInfo.setCalls[0].options.authenticationPrompt, { title: 'Authenticate now' });
   assert.equal(sensitiveInfo.getCalls[0].options.accessControl, 'biometryAny');
+});
+
+test('react-native-sensitive-info adapter merges property-specific options from backend access options', async () => {
+  const sensitiveInfo = createReactNativeSensitiveInfoMock();
+  const backend = createReactNativeSensitiveInfoBackend({ sensitiveInfo: sensitiveInfo.module });
+
+  await backend.setItem(
+    'key-a',
+    'value-a',
+    {
+      propertyOptions: createReactNativeSensitiveInfoOptions({
+        authenticationPrompt: { title: 'Unlock value' },
+        keychainGroup: 'shared.group',
+      }),
+      requiresUserPresence: true,
+    },
+  );
+
+  assert.deepEqual(sensitiveInfo.setCalls[0].options.authenticationPrompt, { title: 'Unlock value' });
+  assert.equal(sensitiveInfo.setCalls[0].options.keychainGroup, 'shared.group');
+  assert.equal(sensitiveInfo.setCalls[0].options.accessControl, 'biometryAny');
 });
 
 test('react-native-sensitive-info adapter ignores unrelated or undecodable native keys when listing', async () => {
