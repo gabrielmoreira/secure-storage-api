@@ -1,11 +1,11 @@
-appId: com.gabrielmoreira.securestorageexample
+appId: com.gabrielmoreira.reactnativesecurestorageexample
 ---
 - launchApp:
     stopApp: true
 - extendedWaitUntil:
-    visible: "Secure Storage Example"
+    visible: "React Native Secure Storage Example"
     timeout: 30000
-- assertVisible: "Secure Storage Example"
+- assertVisible: "React Native Secure Storage Example"
 - tapOn:
     id: "select-backend-expoSecureStore"
 - assertVisible:

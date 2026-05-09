@@ -161,7 +161,7 @@ export default function App() {
       }
 
       if (operation === 'probeUserPresence') {
-        const probeKey = 'secure-storage-example:probe:userPresence';
+        const probeKey = 'react-native-secure-storage-example:probe:userPresence';
 
         try {
           await session.backend.setItem(probeKey, 'probe', {
@@ -299,9 +299,9 @@ export default function App() {
       <View style={styles.screen}>
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.title}>Secure Storage Example</Text>
+          <Text style={styles.title}>React Native Secure Storage Example</Text>
           <Text style={styles.subtitle} testID="backend-selection-intro">
-            A friendly lab for comparing mobile secure-storage backends through the same generic API.
+            A friendly lab for comparing React Native secure-storage backends through the same generic API.
           </Text>
 
           <InfoCard
@@ -334,7 +334,7 @@ export default function App() {
     <View style={styles.screen}>
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Secure Storage Example</Text>
+        <Text style={styles.title}>React Native Secure Storage Example</Text>
         <Text style={styles.subtitle} testID="selected-backend-label">Backend: {session.backendLabel}</Text>
 
         <InfoCard

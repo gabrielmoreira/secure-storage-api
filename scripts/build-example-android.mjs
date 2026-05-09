@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(rootDir, '..');
-const exampleAppDir = path.join(repoRoot, 'apps', 'secure-storage-example');
+const exampleAppDir = path.join(repoRoot, 'apps', 'react-native-secure-storage-example');
 const androidDir = path.join(exampleAppDir, 'android');
 const isWindows = process.platform === 'win32';
 const gradleCommand = isWindows ? 'gradlew.bat' : './gradlew';

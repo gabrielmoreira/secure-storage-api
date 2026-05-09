@@ -12,21 +12,21 @@ description = "Run workspace validation"
 run = "npm test && npm run check && npm run typecheck"
 
 [tasks."example:prebuild"]
-description = "Generate native project for the Expo example app"
-run = "npm run prebuild -w secure-storage-example"
+description = "Generate native project for the Expo React Native example app"
+run = "npm run prebuild -w react-native-secure-storage-example"
 
 [tasks."example:android:build"]
-description = "Build the Expo example app for Android"
+description = "Build the Expo React Native example app for Android"
 depends = ["example:prebuild"]
 run = "zx scripts/build-example-android.mjs"
 
 [tasks."example:android:install"]
-description = "Install the Expo example app on Android"
+description = "Install the Expo React Native example app on Android"
 depends = ["example:prebuild"]
 run = "zx scripts/build-example-android.mjs app:installDebug"
 
 [tasks."example:metro"]
-description = "Start Metro for the Expo example dev client"
+description = "Start Metro for the Expo React Native example dev client"
 run = "zx scripts/start-example-metro.mjs"
 
 [tasks."example:android:maestro"]
@@ -34,5 +34,5 @@ description = "Run Android Maestro flows against an already running app and Metr
 run = "zx scripts/run-example-android-maestro.mjs --no-metro --no-install"
 
 [tasks."example:android:e2e"]
-description = "Build, install, and test the Expo example app on Android with Maestro"
+description = "Build, install, and test the Expo React Native example app on Android with Maestro"
 run = "zx scripts/run-example-android-maestro.mjs"

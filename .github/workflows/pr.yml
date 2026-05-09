@@ -65,7 +65,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('package-lock.json', 'apps/secure-storage-example/package.json', 'apps/secure-storage-example/android/**/*.gradle', 'apps/secure-storage-example/android/**/*.properties', 'apps/secure-storage-example/app.config.js') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('package-lock.json', 'apps/react-native-secure-storage-example/package.json', 'apps/react-native-secure-storage-example/android/**/*.gradle', 'apps/react-native-secure-storage-example/android/**/*.properties', 'apps/react-native-secure-storage-example/app.config.js') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Restore Android SDK cache
@@ -94,10 +94,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            apps/secure-storage-example/android/.gradle
-            apps/secure-storage-example/android/build
-            apps/secure-storage-example/android/app/build
-          key: ${{ runner.os }}-android-build-${{ hashFiles('package-lock.json', 'apps/secure-storage-example/package.json', 'apps/secure-storage-example/app.config.js', 'apps/secure-storage-example/android/**/*.gradle', 'apps/secure-storage-example/android/**/*.properties', 'apps/secure-storage-example/android/**/*.xml', 'apps/secure-storage-example/src/**/*.ts', 'apps/secure-storage-example/App.tsx', 'scripts/build-example-android.mjs', 'scripts/run-example-android-maestro.mjs', 'packages/secure-storage-api/src/**/*.ts', 'packages/secure-storage-expo-secure-store/src/**/*.ts', 'packages/secure-storage-react-native-keychain/src/**/*.ts', 'packages/secure-storage-react-native-sensitive-info/src/**/*.ts') }}
+            apps/react-native-secure-storage-example/android/.gradle
+            apps/react-native-secure-storage-example/android/build
+            apps/react-native-secure-storage-example/android/app/build
+          key: ${{ runner.os }}-android-build-${{ hashFiles('package-lock.json', 'apps/react-native-secure-storage-example/package.json', 'apps/react-native-secure-storage-example/app.config.js', 'apps/react-native-secure-storage-example/android/**/*.gradle', 'apps/react-native-secure-storage-example/android/**/*.properties', 'apps/react-native-secure-storage-example/android/**/*.xml', 'apps/react-native-secure-storage-example/src/**/*.ts', 'apps/react-native-secure-storage-example/App.tsx', 'scripts/build-example-android.mjs', 'scripts/run-example-android-maestro.mjs', 'packages/secure-storage-api/src/**/*.ts', 'packages/secure-storage-expo-secure-store/src/**/*.ts', 'packages/secure-storage-react-native-keychain/src/**/*.ts', 'packages/secure-storage-react-native-sensitive-info/src/**/*.ts') }}
           restore-keys: |
             ${{ runner.os }}-android-build-
       - name: Set up Android SDK tools
@@ -132,9 +132,9 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            apps/secure-storage-example/android/.gradle
-            apps/secure-storage-example/android/build
-            apps/secure-storage-example/android/app/build
+            apps/react-native-secure-storage-example/android/.gradle
+            apps/react-native-secure-storage-example/android/build
+            apps/react-native-secure-storage-example/android/app/build
           key: ${{ steps.restore-android-build-cache.outputs.cache-primary-key }}
       - name: Run Android emulator and Maestro through mise task
         run: ANDROID_SERIAL=emulator-5554 mise run example:android:e2e

@@ -1,5 +1,5 @@
 {
-  "name": "secure-storage-example",
+  "name": "react-native-secure-storage-example",
   "version": "1.0.0",
   "main": "index.ts",
   "private": true,

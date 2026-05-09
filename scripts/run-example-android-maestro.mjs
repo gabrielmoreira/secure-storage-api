@@ -10,10 +10,10 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(rootDir, '..');
-const exampleAppDir = path.join(repoRoot, 'apps', 'secure-storage-example');
+const exampleAppDir = path.join(repoRoot, 'apps', 'react-native-secure-storage-example');
 const androidDir = path.join(exampleAppDir, 'android');
-const metroLogPath = path.join(os.tmpdir(), 'secure-storage-example-metro.log');
-const appId = 'com.gabrielmoreira.securestorageexample';
+const metroLogPath = path.join(os.tmpdir(), 'react-native-secure-storage-example-metro.log');
+const appId = 'com.gabrielmoreira.reactnativesecurestorageexample';
 const maestroFlowPath = process.env.MAESTRO_FLOW ?? '.maestro/all.yaml';
 const shouldStartMetro = !process.argv.includes('--no-metro');
 const shouldInstallApp = !process.argv.includes('--no-install');
@@ -150,7 +150,7 @@ async function startMetro() {
   metroLogStream = createWriteStream(metroLogPath, { flags: 'w' });
   metroProcess = spawnCommand(
     npmCommand,
-    ['run', 'start', '-w', 'secure-storage-example', '--', '--dev-client', '--localhost', '--port', '8081'],
+    ['run', 'start', '-w', 'react-native-secure-storage-example', '--', '--dev-client', '--localhost', '--port', '8081'],
     {
       cwd: repoRoot,
       env: {

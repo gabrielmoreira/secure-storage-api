@@ -47,12 +47,12 @@ export const backendCatalog = [
       return createExpoSecureStoreBackend({
         secureStore: expoSecureStoreModule,
         baseOptions: {
-          keychainService: 'secure-storage-example',
+          keychainService: 'react-native-secure-storage-example',
         },
         userPresenceOptions: {
           requireAuthentication: true,
           authenticationPrompt: 'Authenticate to access secure values',
-          keychainService: 'secure-storage-example',
+          keychainService: 'react-native-secure-storage-example',
         },
       });
     },
@@ -64,7 +64,7 @@ export const backendCatalog = [
     createBackend(): SecureStorageBackend {
       return createReactNativeKeychainBackend({
         keychain: reactNativeKeychainModule,
-        servicePrefix: 'secure-storage-example',
+        servicePrefix: 'react-native-secure-storage-example',
         userPresenceOptions: {
           authenticationPrompt: {
             title: 'Authenticate to access secure values',
@@ -80,7 +80,7 @@ export const backendCatalog = [
     createBackend(): SecureStorageBackend {
       return createReactNativeSensitiveInfoBackend({
         sensitiveInfo: reactNativeSensitiveInfoModule,
-        service: 'secure-storage-example',
+        service: 'react-native-secure-storage-example',
         baseOptions: {
           accessControl: 'none',
         },
