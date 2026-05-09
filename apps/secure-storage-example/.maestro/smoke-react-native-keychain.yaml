@@ -21,5 +21,9 @@ appId: com.gabrielmoreira.securestorageexample
     direction: DOWN
 - tapOn:
     id: "action-set"
+- scrollUntilVisible:
+    element:
+      id: "action-get"
+    direction: DOWN
 - tapOn:
     id: "action-get"
